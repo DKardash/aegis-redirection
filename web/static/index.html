@@ -1,0 +1,1284 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Панель маршрутизации</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/style.css?v=25">
+</head>
+<body>
+  <!-- ======= LOGIN ======= -->
+  <div id="login-view" class="hidden">
+    <div class="auth">
+      <div class="auth-brand">
+        <div class="logo-mark" aria-hidden="true"><span></span></div>
+        <span class="logo-text">Панель маршрутизации</span>
+      </div>
+      <div class="auth-card card">
+        <h1 class="auth-title">Авторизация</h1>
+        <p class="auth-subtitle">Защищённый доступ к сетевому управлению</p>
+        <form id="login-form" novalidate>
+          <div class="field">
+            <label for="login-username">Логин</label>
+            <input type="text" id="login-username" autocomplete="username" required placeholder="admin">
+          </div>
+          <div class="field">
+            <label for="login-password">Пароль</label>
+            <input type="password" id="login-password" autocomplete="current-password" required placeholder="••••••••">
+          </div>
+          <button type="submit" class="btn btn-primary btn-block">Войти</button>
+          <p id="login-error" class="error"></p>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======= APP SHELL ======= -->
+  <div id="main-view" class="hidden">
+    <aside class="side-nav" id="side-nav">
+      <div class="side-nav__brand">
+        <div class="logo-mark logo-mark--nav" aria-hidden="true"><span></span></div>
+        <span class="logo-text">Маршрутизация</span>
+      </div>
+      <div class="side-nav__label">Общее</div>
+      <nav class="side-nav__items">
+        <button class="nav-item active" data-view="overview" type="button">
+          <svg viewBox="0 0 256 256" class="nav-icon"><path d="M232 144a8 8 0 0 1-8 8h-24v56a8 8 0 0 1-8 8h-56v-56H120v56H64a8 8 0 0 1-8-8v-56H32a8 8 0 0 1-5.66-13.66l96-96a8 8 0 0 1 11.32 0l96 96A8 8 0 0 1 232 144Z"/></svg>
+          <span>Обзор</span>
+        </button>
+        <button class="nav-item" data-view="servers" type="button">
+          <svg viewBox="0 0 256 256" class="nav-icon"><path d="M216 40H40a16 16 0 0 0-16 16v144a16 16 0 0 0 16 16h176a16 16 0 0 0 16-16V56a16 16 0 0 0-16-16Zm0 160H40v-56h176Zm0-72H40V56h176Z"/></svg>
+          <span>Серверы</span>
+        </button>
+        <button class="nav-item" data-view="interfaces" type="button">
+          <svg viewBox="0 0 256 256" class="nav-icon"><path d="M224 96h-32V72a24 24 0 0 0-24-24h-32V24a8 8 0 0 0-16 0v24H88a24 24 0 0 0-24 24v24H32a8 8 0 0 0 0 16h32v32H32a8 8 0 0 0 0 16h32v24a24 24 0 0 0 24 24h32v24a8 8 0 0 0 16 0v-24h32a24 24 0 0 0 24-24v-24h32a8 8 0 0 0 0-16h-32v-32h32a8 8 0 0 0 0-16Zm-48 88a8 8 0 0 1-8 8H88a8 8 0 0 1-8-8V72a8 8 0 0 1 8-8h80a8 8 0 0 1 8 8Z"/></svg>
+          <span>Интерфейсы</span>
+        </button>
+        <button class="nav-item" data-view="password" type="button">
+          <svg viewBox="0 0 256 256" class="nav-icon"><path d="M208 88h-24V64a56 56 0 0 0-112 0v24H48a16 16 0 0 0-16 16v112a16 16 0 0 0 16 16h160a16 16 0 0 0 16-16V104a16 16 0 0 0-16-16ZM88 64a40 40 0 0 1 80 0v24H88Zm72 104a32 32 0 1 1-32-32 32 32 0 0 1 32 32Z"/></svg>
+          <span>Смена пароля</span>
+        </button>
+        <button class="nav-item" data-view="docs" type="button">
+          <svg viewBox="0 0 256 256" class="nav-icon"><path d="M224 40H64a16 16 0 0 0-16 16v152a8 8 0 0 0 8 8h144a8 8 0 0 1 0 16H48a8 8 0 0 1-8-8V48a24 24 0 0 1 24-24h160a8 8 0 0 1 8 8v128a8 8 0 0 1-8 8H88a8 8 0 0 1 0-16h128Zm-40 32H88a8 8 0 0 0-8 8v16a8 8 0 0 0 8 8h96a8 8 0 0 0 8-8V80a8 8 0 0 0-8-8Zm-8 24H96V88h80Z"/></svg>
+          <span>Документация</span>
+        </button>
+        <button class="nav-item" data-view="addresslists" type="button">
+          <svg viewBox="0 0 256 256" class="nav-icon"><path d="M128 16a88 88 0 1 0 88 88 88.1 88.1 0 0 0-88-88Zm0 160a72 72 0 1 1 72-72 72.1 72.1 0 0 1-72 72Zm40-80a8 8 0 0 1-8 8h-24v24a8 8 0 0 1-16 0v-24H96a8 8 0 0 1 0-16h24V88a8 8 0 0 1 16 0v24h24a8 8 0 0 1 8 8Z"/></svg>
+          <span>Адрес Лист</span>
+        </button>
+        <button class="nav-item" data-view="audit" type="button">
+          <svg viewBox="0 0 256 256" class="nav-icon"><path d="M216 40H40a16 16 0 0 0-16 16v160a16 16 0 0 0 16 16h176a16 16 0 0 0 16-16V56a16 16 0 0 0-16-16Zm-40 128H96a8 8 0 0 1 0-16h80a8 8 0 0 1 0 16Zm0-32H96a8 8 0 0 1 0-16h80a8 8 0 0 1 0 16Zm0-32H96a8 8 0 0 1 0-16h80a8 8 0 0 1 0 16Z"/></svg>
+          <span>Журнал</span>
+        </button>
+        <button class="nav-item" data-view="monitor" type="button">
+          <svg viewBox="0 0 256 256" class="nav-icon"><path d="M232 128a104 104 0 0 1-208 0 8 8 0 0 1 16 0 88 88 0 1 0 25.8-62.2 8 8 0 1 1-11.3 11.3A104 104 0 0 1 232 128Zm-128-8v32a8 8 0 0 0 16 0v-32a8 8 0 0 0-16 0Zm-32 0v24a8 8 0 0 0 16 0v-24a8 8 0 0 0-16 0Zm96-8a8 8 0 0 0-8 8v24a8 8 0 0 0 16 0v-24a8 8 0 0 0-8-8Z"/></svg>
+          <span>Мониторинг</span>
+        </button>
+        <button class="nav-item" data-view="alerts" type="button">
+          <svg viewBox="0 0 256 256" class="nav-icon"><path d="M224 120v16a104 104 0 0 1-96 103.9V136h56l-32-32 32-32H128V8.1A104 104 0 0 1 224 120Z"/></svg>
+          <span>Алерты</span>
+        </button>
+      </nav>
+    </aside>
+    <div class="backdrop" id="nav-backdrop"></div>
+
+    <div class="app-main">
+      <header class="topbar">
+        <button class="icon-btn" id="btn-nav-toggle" type="button" aria-label="Menu">
+          <svg viewBox="0 0 256 256" class="icon-20"><path d="M224 128a8 8 0 0 1-8 8H40a8 8 0 0 1 0-16h176a8 8 0 0 1 8 8ZM40 72h176a8 8 0 0 0 0-16H40a8 8 0 0 0 0 16Zm176 112H40a8 8 0 0 0 0 16h176a8 8 0 0 0 0-16Z"/></svg>
+        </button>
+        <h1 class="topbar__title" id="page-title">Обзор</h1>
+        <div class="topbar__spacer"></div>
+        <span id="status-badge" class="chip chip-muted">—</span>
+        <div class="avatar" title="admin">A</div>
+        <button id="btn-logout" class="btn btn-ghost btn-sm" type="button">Выйти</button>
+      </header>
+
+      <main class="content">
+        <!-- ===== OVERVIEW ===== -->
+        <section id="view-overview" class="view">
+          <div class="grid grid-4">
+            <div class="stat-card">
+              <span class="stat-label">Интерфейсы</span>
+              <span class="stat-value" id="stat-active">—</span>
+              <span class="stat-sub" id="stat-active-sub"></span>
+            </div>
+            <div class="stat-card">
+              <span class="stat-label">Процесс xray</span>
+              <span class="stat-value" id="stat-xray">—</span>
+              <span class="stat-sub" id="stat-xray-sub"></span>
+            </div>
+            <div class="stat-card">
+              <span class="stat-label">Доступность выходов</span>
+              <span class="stat-value" id="stat-health">—</span>
+              <span class="stat-sub" id="stat-health-sub"></span>
+            </div>
+            <div class="stat-card">
+              <span class="stat-label">На резерве</span>
+              <span class="stat-value" id="stat-best">—</span>
+              <span class="stat-sub" id="stat-best-sub"></span>
+            </div>
+          </div>
+
+          <div class="grid grid-4 overview-secondary">
+            <div class="stat-card">
+              <span class="stat-label">Серверы</span>
+              <span class="stat-value" id="stat-servers">—</span>
+              <span class="stat-sub" id="stat-servers-sub">доступность из последней проверки</span>
+            </div>
+            <div class="stat-card">
+              <span class="stat-label">L2TP-сессии</span>
+              <span class="stat-value" id="stat-l2tp">—</span>
+              <span class="stat-sub">активные подключения</span>
+            </div>
+            <div class="stat-card">
+              <span class="stat-label">Публичный IP ВМ</span>
+              <span class="stat-value stat-value--compact" id="stat-public-ip">—</span>
+              <span class="stat-sub">прямое соединение ВМ</span>
+            </div>
+            <div class="stat-card">
+              <span class="stat-label">Ресурсы ВМ</span>
+              <span class="stat-value stat-value--compact" id="stat-resources">—</span>
+              <span class="stat-sub" id="stat-resources-sub">CPU · память · диск</span>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <h2 class="card-title">Состояние узла</h2>
+              <button id="btn-refresh-status" class="btn btn-ghost btn-sm" type="button">Обновить</button>
+            </div>
+            <div class="card-body">
+              <div id="traffic-info" class="stat-rows">Загрузка…</div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <h2 class="card-title">Маршруты интерфейсов</h2>
+            </div>
+            <div class="card-body">
+              <div class="actions">
+                <button id="btn-switch-best" class="btn btn-primary" type="button">Настроить интерфейсы</button>
+                <button id="btn-run-failover" class="btn btn-ghost" type="button">Проверить резервирование</button>
+              </div>
+              <div id="overview-routes" class="stat-rows" style="margin-top:16px;"></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ===== SERVERS ===== -->
+        <section id="view-servers" class="view hidden">
+          <div class="card">
+            <div class="card-header">
+              <div><h2 class="card-title">Каталог серверов</h2><p class="muted">Добавляйте ссылки и подписки. После добавления сервер проверяется; рабочие подключения выбираются в разделе «Интерфейсы».</p></div>
+              <div class="actions">
+                <button id="btn-add" class="btn btn-primary btn-sm" type="button">Добавить</button>
+                <button id="btn-import" class="btn btn-ghost btn-sm" type="button">Импорт ссылки</button>
+                <button id="btn-bulk-check" class="btn btn-ghost btn-sm" type="button">Массовая проверка</button>
+              </div>
+            </div>
+            <div class="card-body">
+              <div class="table-wrap">
+                <table id="servers-table">
+                  <thead>
+                    <tr>
+                      <th>ID</th>
+                      <th>Имя</th>
+                      <th>Протокол</th>
+                      <th>Адрес</th>
+                      <th>Порт</th>
+                      <th>SNI</th>
+                      <th>Вкл</th>
+                      <th>Health</th>
+                      <th>Лат, мс</th>
+                      <th class="ta-r">Действия</th>
+                    </tr>
+                  </thead>
+                  <tbody id="servers-body"></tbody>
+                </table>
+              </div>
+              <p id="servers-empty" class="muted empty-note hidden">Серверов нет. Добавьте первый.</p>
+            </div>
+          </div>
+        </section>
+
+        <!-- ===== WIREGUARD ===== -->
+        <section id="view-wireguard" class="view hidden">
+          <div class="card">
+            <div class="card-header">
+              <h2 class="card-title">Интерфейс</h2>
+              <div class="actions">
+                <button id="btn-wg-refresh" class="btn btn-ghost btn-sm" type="button">Обновить</button>
+                <button id="btn-wg-apply" class="btn btn-ghost btn-sm" type="button">Перезапустить</button>
+                <button id="btn-wg-edit-iface" class="btn btn-ghost btn-sm" type="button">Интерфейс</button>
+              </div>
+            </div>
+            <div class="card-body">
+              <div id="wg-info" class="wg-summary">Загрузка…</div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-header">
+              <h2 class="card-title">Peers</h2>
+              <button id="btn-wg-add-peer" class="btn btn-primary btn-sm" type="button">Добавить peer</button>
+            </div>
+            <div class="card-body">
+              <div class="table-wrap">
+                <table id="wg-table">
+                  <thead>
+                    <tr>
+                      <th>Public key</th>
+                      <th>Endpoint</th>
+                      <th>Allowed IPs</th>
+                      <th>Keepalive</th>
+                      <th>Handshake</th>
+                      <th>Rx / Tx</th>
+                      <th class="ta-r">Действия</th>
+                    </tr>
+                  </thead>
+                  <tbody id="wg-body"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ===== VM INTERFACES / L2TP / INDEPENDENT EGRESS ===== -->
+        <section id="view-interfaces" class="view hidden">
+          <div class="card">
+            <div class="card-header">
+              <div>
+                <h2 class="card-title">Интерфейсы ВМ и VPN-локации</h2>
+                <p class="muted" style="margin:5px 0 0;font-size:12px;">Каждый адрес принимает отдельное L2TP-подключение и отправляет его через выбранный сервер Xray.</p>
+              </div>
+              <div class="actions">
+                <button id="btn-profile-users" class="btn btn-ghost btn-sm" type="button">Пользователи</button>
+                <button id="btn-profile-apply" class="btn btn-ghost btn-sm" type="button">Применить</button>
+                <button id="btn-profile-add" class="btn btn-primary btn-sm" type="button">Добавить интерфейс</button>
+              </div>
+            </div>
+            <div class="card-body">
+              <div class="wg-summary" style="margin-bottom:14px;">
+                <span>Для каждого адреса выберите основной и резервный сервер. После двух неудачных проверок включается резерв; после двух успешных — возврат на основной. Проверки повторяются через 30 секунд после завершения предыдущих.</span>
+              </div>
+              <div class="table-wrap">
+                <table id="profiles-table">
+                  <thead>
+                    <tr>
+                      <th>Адрес ВМ</th>
+                      <th>Пользователь</th>
+                      <th>Основной / резерв / текущий</th>
+                      <th>Состояние</th>
+                      <th></th>
+                    </tr>
+                  </thead>
+                  <tbody id="profiles-body"><tr><td colspan="5" class="muted">Загрузка…</td></tr></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <div class="card" id="l2tp-server-card">
+            <div class="card-header">
+              <div>
+                <h2 class="card-title">Общие настройки L2TP/IPsec</h2>
+                <p class="muted" style="margin:5px 0 0;font-size:12px;">Состояние IPsec и основного L2TP-сервиса. Дополнительные адреса управляются профилями выше.</p>
+              </div>
+              <div class="actions">
+                <button id="btn-l2tp-refresh" class="btn btn-ghost btn-sm" type="button">Обновить</button>
+                <button id="btn-l2tp-restart" class="btn btn-ghost btn-sm" type="button">Перезапустить</button>
+                <button id="btn-l2tp-edit" class="btn btn-primary btn-sm" type="button">Настройки</button>
+              </div>
+            </div>
+            <div class="card-body">
+              <div id="l2tp-info" class="wg-summary">Загрузка…</div>
+            </div>
+          </div>
+
+          <div class="card" id="l2tp-users-card">
+            <div class="card-header">
+              <div>
+                <h2 class="card-title">Пользователи L2TP</h2>
+                <p class="muted" style="margin:5px 0 0;font-size:12px;">Один логин можно выбрать для нескольких адресов ВМ.</p>
+              </div>
+              <button id="btn-l2tp-add-user" class="btn btn-primary btn-sm" type="button">Добавить</button>
+            </div>
+            <div class="card-body">
+              <div class="table-wrap">
+                <table id="l2tp-users-table">
+                  <thead>
+                    <tr>
+                      <th>Логин</th>
+                      <th>Пароль</th>
+                      <th>PPP IP</th>
+                      <th></th>
+                    </tr>
+                  </thead>
+                  <tbody id="l2tp-users-body"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <h2 class="card-title">Активные PPP-сессии</h2>
+              <span class="chip chip-muted">L2TP / IPsec</span>
+            </div>
+            <div class="card-body">
+              <div class="table-wrap">
+                <table id="l2tp-table">
+                  <thead>
+                    <tr>
+                      <th>PPP-интерфейс</th>
+                      <th>Состояние</th>
+                      <th>Адрес клиента</th>
+                      <th>Маршрут</th>
+                      <th>Rx</th>
+                      <th>Tx</th>
+                    </tr>
+                  </thead>
+                  <tbody id="l2tp-body"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ===== ADMIN PASSWORD ===== -->
+        <section id="view-password" class="view hidden">
+          <div class="card" style="max-width:720px;">
+            <div class="card-header">
+              <div>
+                <h2 class="card-title">Смена пароля панели</h2>
+                <p class="muted" style="margin:5px 0 0;font-size:12px;">Пароль используется для входа в панель управления на порту 8790.</p>
+              </div>
+            </div>
+            <div class="card-body">
+              <form id="password-form" novalidate>
+                <div class="field">
+                  <label for="password-current">Текущий пароль</label>
+                  <input type="password" id="password-current" autocomplete="current-password" required>
+                </div>
+                <div class="field">
+                  <label for="password-new">Новый пароль</label>
+                  <input type="password" id="password-new" autocomplete="new-password" minlength="8" required>
+                </div>
+                <div class="field">
+                  <label for="password-confirm">Повторите новый пароль</label>
+                  <input type="password" id="password-confirm" autocomplete="new-password" minlength="8" required>
+                </div>
+                <p class="muted" style="font-size:12px;line-height:1.5;">Минимум 8 символов. После сохранения все открытые сессии панели будут завершены.</p>
+                <div class="actions" style="margin-top:16px;">
+                  <button type="submit" class="btn btn-primary">Изменить пароль</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </section>
+
+        <!-- ===== AUDIT ===== -->
+        <section id="view-audit" class="view hidden">
+          <div class="card">
+            <div class="card-header">
+              <h2 class="card-title">Журнал действий</h2>
+              <div class="actions">
+                <select id="audit-filter" class="select-input">
+                  <option value="">Все действия</option>
+                  <option value="l2tp_config">l2tp_config</option>
+                  <option value="l2tp_restart">l2tp_restart</option>
+                  <option value="l2tp_user_add">l2tp_user_add</option>
+                  <option value="l2tp_user_del">l2tp_user_del</option>
+                  <option value="addresslists_save">addresslists_save</option>
+                  <option value="server_">server_*</option>
+                  <option value="activate">activate</option>
+                  <option value="healthcheck">healthcheck</option>
+                  <option value="failover">failover / best_probe</option>
+                </select>
+                <button id="btn-audit-refresh" class="btn btn-ghost btn-sm" type="button">Обновить</button>
+                <button id="btn-clear-data" class="btn btn-danger btn-sm" type="button">Удалить данные</button>
+              </div>
+            </div>
+            <div class="card-body">
+              <div class="table-wrap">
+                <table id="audit-table">
+                  <thead>
+                    <tr>
+                      <th>Время</th>
+                      <th>Действие</th>
+                      <th>Детали</th>
+                    </tr>
+                  </thead>
+                  <tbody id="audit-body"><tr><td colspan="3" class="muted">Загрузка…</td></tr></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ===== ADDRESS LISTS ===== -->
+        <section id="view-addresslists" class="view hidden">
+          <div class="card">
+            <div class="card-header">
+              <h2 class="card-title">Адрес-листы MikroTik</h2>
+              <div class="actions">
+                <button id="btn-al-refresh" class="btn btn-ghost btn-sm" type="button">Обновить</button>
+                <button id="btn-al-resolve" class="btn btn-primary btn-sm" type="button">Резолв доменов → IP</button>
+                <button id="btn-al-apply" class="btn btn-primary btn-sm" type="button">Применить на MikroTik</button>
+                <button id="btn-al-edit" class="btn btn-ghost btn-sm" type="button">Редактировать .rsc</button>
+                <button id="btn-al-backups" class="btn btn-ghost btn-sm" type="button">Бэкапы .rsc</button>
+                <button id="btn-al-copy-all" class="btn btn-ghost btn-sm" type="button">Копировать всё</button>
+                <button id="btn-al-sync" class="btn btn-ghost btn-sm" type="button">Скрипт синхронизации</button>
+                <a id="btn-al-download" class="btn btn-ghost btn-sm" href="/static/mikrotik-vpn-lists.rsc" download>Скачать .rsc</a>
+              </div>
+            </div>
+            <div class="card-body">
+              <p style="margin:0 0 12px;color:var(--text-secondary);font-size:13px;">
+                Ваши списки <code>TELEGRAM_DNS</code>, <code>DISCORD_DNS</code> и <code>PUBG_DNS</code>.
+                Копируйте по отдельности или скачайте общий файл. Имена списков и отключённые записи сохраняются при резолве.
+              </p>
+              <div id="al-groups" class="al-groups">Загрузка…</div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <h2 class="card-title">Авто-обновление листов</h2>
+              <span class="chip chip-muted" id="al-auto-status">—</span>
+            </div>
+            <div class="card-body">
+              <p style="margin:0 0 10px;color:var(--text-secondary);font-size:13px;">
+                Пересобирает листы (резолв доменов → IP) и применяет изменения на MikroTik
+                по расписанию. По умолчанию выключено.
+              </p>
+              <label class="check-line">
+                <input type="checkbox" id="al-auto-enabled">
+                <span>Автоматически применять листы по расписанию</span>
+              </label>
+              <div class="form-grid" style="margin-top:8px;">
+                <div class="field">
+                  <label for="al-auto-time">Время запуска (HH:MM, локальное)</label>
+                  <input type="time" id="al-auto-time" value="04:00">
+                </div>
+                <div class="field">
+                  <label>Последний запуск</label>
+                  <b id="al-auto-last">—</b>
+                </div>
+              </div>
+              <div class="actions" style="margin-top:12px;">
+                <button type="button" class="btn btn-primary btn-sm" id="btn-al-auto-save">Сохранить</button>
+                <button type="button" class="btn btn-ghost btn-sm" id="btn-al-auto-run">Запустить сейчас</button>
+              </div>
+              <div id="al-auto-progress-wrap" style="display:none;height:12px;background:var(--border);border-radius:6px;overflow:hidden;margin-top:10px;">
+                <div id="al-auto-progress" style="height:100%;width:0%;background:var(--primary);transition:width .3s;"></div>
+              </div>
+              <div id="al-auto-result" class="muted" style="margin-top:8px;font-size:13px;"></div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <h2 class="card-title">Записи на MikroTik</h2>
+              <div class="actions">
+                <select id="al-mt-list" style="width:auto;padding:6px 8px;max-width:220px;"></select>
+                <button id="btn-al-mt-import" class="btn btn-ghost btn-sm" type="button">Импорт</button>
+                <button id="btn-al-mt-export" class="btn btn-ghost btn-sm" type="button">Экспорт</button>
+                <button id="btn-al-mt-refresh" class="btn btn-ghost btn-sm" type="button">Обновить</button>
+              </div>
+            </div>
+            <div class="card-body">
+              <form id="al-mt-form" class="al-form">
+                <input type="text" id="al-mt-address" placeholder="домен или IP" required style="flex:2">
+                <input type="text" id="al-mt-comment" placeholder="комментарий (необязательно)" style="flex:2">
+                <button type="submit" class="btn btn-primary btn-sm">Добавить</button>
+              </form>
+              <input type="text" id="al-mt-search" placeholder="Поиск по адресу/комментарию…" style="margin-top:10px;">
+              <div class="table-wrap" style="margin-top:10px;">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Адрес</th>
+                      <th>Комментарий</th>
+                      <th>Статус</th>
+                      <th style="width:220px"></th>
+                    </tr>
+                  </thead>
+                  <tbody id="al-mt-body"><tr><td colspan="4" class="muted">Загрузка…</td></tr></tbody>
+                </table>
+              </div>
+              <div id="al-mt-info" class="muted" style="margin-top:8px;"></div>
+              <div class="actions" style="margin-top:8px;">
+                <button id="btn-al-mt-prev" class="btn btn-ghost btn-sm" type="button">← Назад</button>
+                <button id="btn-al-mt-next" class="btn btn-ghost btn-sm" type="button">Вперёд →</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <h2 class="card-title">Клиенты через VPN</h2>
+              <span class="chip chip-muted">mark-routing → mark_table_VPN</span>
+            </div>
+            <div class="card-body">
+              <p style="margin:0 0 10px;color:var(--text-secondary);font-size:13px;">
+                Уводит весь трафик конкретного клиента (по IP) в туннель через правило
+                mangle, независимо от адрес-листов. Включается/выключается из панели.
+              </p>
+              <form id="client-vpn-form" class="al-form">
+                <input type="text" id="cv-ip" placeholder="IP клиента, напр. 10.100.77.200" required style="flex:2">
+                <button type="submit" class="btn btn-primary btn-sm">Добавить</button>
+              </form>
+              <div class="table-wrap" style="margin-top:10px;">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>IP клиента</th>
+                      <th>Статус</th>
+                      <th style="width:230px"></th>
+                    </tr>
+                  </thead>
+                  <tbody id="cv-body"><tr><td colspan="3" class="muted">Загрузка…</td></tr></tbody>
+                </table>
+              </div>
+              <div id="cv-result" class="muted" style="margin-top:8px;font-size:13px;"></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ===== MONITOR ===== -->
+        <section id="view-monitor" class="view hidden">
+          <div class="grid grid-4">
+            <div class="stat-card">
+              <span class="stat-label">CPU</span>
+              <span class="stat-value" id="mon-cpu">—</span>
+              <span class="stat-sub" id="mon-cpu-sub"></span>
+            </div>
+            <div class="stat-card">
+              <span class="stat-label">Память</span>
+              <span class="stat-value" id="mon-ram">—</span>
+              <span class="stat-sub" id="mon-ram-sub"></span>
+            </div>
+            <div class="stat-card">
+              <span class="stat-label">Диск</span>
+              <span class="stat-value" id="mon-disk">—</span>
+              <span class="stat-sub" id="mon-disk-sub"></span>
+            </div>
+            <div class="stat-card">
+              <span class="stat-label">Uptime</span>
+              <span class="stat-value" id="mon-uptime">—</span>
+              <span class="stat-sub" id="mon-uptime-sub"></span>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <h2 class="card-title">Сервисы и туннель</h2>
+              <div class="actions">
+                <button id="btn-mon-check" class="btn btn-ghost btn-sm" type="button">Проверить туннель</button>
+                <button id="btn-mon-restart" class="btn btn-danger btn-sm" type="button">Перезапустить L2TP</button>
+                <button id="btn-mon-refresh" class="btn btn-ghost btn-sm" type="button">Обновить</button>
+              </div>
+            </div>
+            <div class="card-body">
+              <div class="stat-rows">
+                <div class="row-line"><span>Публичный IP ВМ (прямой выход)</span><b id="mon-ip">—</b></div>
+                <div class="row-line"><span>Доступность выходов интерфейсов</span><b id="mon-tunnel">—</b></div>
+                <div class="row-line"><span>L2TP-сессии (ppp)</span><b id="mon-ppp">—</b></div>
+                <div class="row-line"><span>xray / strongswan / xl2tpd / manager</span><b id="mon-services">—</b></div>
+              </div>
+              <div id="mon-l2tp-sessions" class="stat-rows"></div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <h2 class="card-title">Трафик L2TP (ppp)</h2>
+              <div class="actions">
+                <span class="chip chip-muted" id="traffic-range">60 мин</span>
+                <button id="btn-traffic-refresh" class="btn btn-ghost btn-sm" type="button">Обновить</button>
+              </div>
+            </div>
+            <div class="card-body">
+              <canvas id="traffic-canvas" class="traffic-canvas"></canvas>
+              <div class="traffic-legend">
+                <span><i class="dot dot-ppp"></i> ppp RX</span>
+                <span><i class="dot dot-ppp-tx"></i> ppp TX</span>
+                <span class="muted" id="traffic-now"></span>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <h2 class="card-title">MikroTik (роутер)</h2>
+              <div class="actions">
+                <button id="btn-mt-mode" class="btn btn-ghost btn-sm hidden" type="button" disabled>Режим: …</button>
+                <button id="btn-mt-refresh" class="btn btn-ghost btn-sm" type="button">Обновить</button>
+              </div>
+            </div>
+            <div class="card-body">
+              <form id="mt-form" class="al-form">
+                <div class="form-grid">
+                  <div class="field">
+                    <label for="mt-host">IP / хост роутера</label>
+                    <input type="text" id="mt-host" autocomplete="off" placeholder="192.168.88.1">
+                  </div>
+                  <div class="field">
+                    <label for="mt-port">Порт REST API</label>
+                    <input type="number" id="mt-port" min="1" max="65535" value="8728">
+                  </div>
+                  <div class="field">
+                    <label for="mt-user">Логин</label>
+                    <input type="text" id="mt-user" autocomplete="username" placeholder="admin">
+                  </div>
+                  <div class="field">
+                    <label for="mt-pass">Пароль</label>
+                    <input type="password" id="mt-pass" autocomplete="current-password">
+                  </div>
+                </div>
+                <label class="check-line">
+                  <input type="checkbox" id="mt-ssl">
+                  <span>HTTPS (RouterOS REST, порт 443)</span>
+                </label>
+                <label class="check-line hidden" style="margin-top:6px;">
+                  <input type="checkbox" id="mt-af">
+                  <span>Авто-переключение туннелей WG/L2TP при падении</span>
+                </label>
+                <div class="form-grid hidden" style="margin-top:6px;">
+                  <div class="field">
+                    <label for="mt-af-interval">Проверка туннелей каждые (сек)</label>
+                    <input type="number" id="mt-af-interval" min="15" max="600" value="30">
+                  </div>
+                </div>
+                <div class="actions" style="margin-top:12px;">
+                  <button type="submit" class="btn btn-primary btn-sm">Сохранить</button>
+                  <button type="button" class="btn btn-ghost btn-sm" id="btn-mt-test">Проверить подключение</button>
+                </div>
+              </form>
+              <div id="mt-result" class="stat-rows" style="margin-top:12px;"></div>
+
+              <div style="margin-top:14px;border-top:1px solid var(--border);padding-top:10px;">
+                <h3 style="font-size:14px;margin:0 0 8px;">Бэкап конфига роутера</h3>
+                <label class="check-line">
+                  <input type="checkbox" id="rb-enabled">
+                  <span>Авто-бэкап по расписанию (по умолчанию выключено)</span>
+                </label>
+                <div class="form-grid" style="margin-top:8px;">
+                  <div class="field">
+                    <label for="rb-time">Время запуска (HH:MM, локальное)</label>
+                    <input type="time" id="rb-time" value="03:00">
+                  </div>
+                  <div class="field">
+                    <label>Последний бэкап</label>
+                    <b id="rb-last">—</b>
+                  </div>
+                </div>
+                <div class="actions" style="margin-top:10px;">
+                  <button type="button" class="btn btn-primary btn-sm" id="btn-rb-save">Сохранить</button>
+                  <button type="button" class="btn btn-ghost btn-sm" id="btn-rb-now">Сделать бэкап сейчас</button>
+                  <button type="button" class="btn btn-ghost btn-sm" id="btn-rb-export">Экспорт .rsc</button>
+                </div>
+                <div id="rb-result" class="muted" style="margin-top:8px;font-size:13px;"></div>
+                <div class="table-wrap" style="margin-top:10px;">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Файл</th>
+                        <th>Размер</th>
+                        <th>Время</th>
+                        <th style="width:90px"></th>
+                      </tr>
+                    </thead>
+                    <tbody id="rb-body"><tr><td colspan="4" class="muted">—</td></tr></tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <h2 class="card-title">VLESS-серверы (TCP-пинг)</h2>
+              <div class="actions">
+                <button id="btn-mon-servers" class="btn btn-ghost btn-sm" type="button">Проверить</button>
+              </div>
+            </div>
+            <div class="card-body">
+              <div class="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>ID</th>
+                      <th>Сервер</th>
+                      <th>Адрес</th>
+                      <th>Статус</th>
+                      <th>Latency</th>
+                      <th>Best (мин)</th>
+                    </tr>
+                  </thead>
+                  <tbody id="mon-servers-body"><tr><td colspan="6" class="muted">Нажмите «Проверить»</td></tr></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ===== ALERTS ===== -->
+        <section id="view-alerts" class="view hidden">
+          <div class="card">
+            <div class="card-header">
+              <h2 class="card-title">Алерты (Telegram + watchdog)</h2>
+              <span class="chip chip-muted">проверка каждые N сек</span>
+            </div>
+            <div class="card-body">
+              <div class="stat-rows">
+                <div class="row-line"><span>Статус</span><b id="al-status">—</b></div>
+                <div class="row-line"><span>Последняя проверка</span><b id="al-last">—</b></div>
+              </div>
+              <form id="al-form" class="al-form">
+                <label class="check-line">
+                  <input type="checkbox" id="al-enabled">
+                  <span>Включить алерты и watchdog</span>
+                </label>
+                <label class="check-line">
+                  <input type="checkbox" id="al-autorestart">
+                  <span>Авто-перезапуск L2TP при падении туннеля</span>
+                </label>
+                <div class="form-grid">
+                  <div class="field">
+                    <label for="al-interval">Интервал проверки (сек)</label>
+                    <input type="number" id="al-interval" min="10" max="3600" value="60">
+                  </div>
+                  <div class="field">
+                    <label for="al-disk">Порог диска (%)</label>
+                    <input type="number" id="al-disk" min="1" max="100" value="90">
+                  </div>
+                  <div class="field">
+                    <label for="al-router-cpu">Порог CPU роутера (%)</label>
+                    <input type="number" id="al-router-cpu" min="1" max="100" value="90">
+                  </div>
+                  <div class="field">
+                    <label for="al-source-ip">Интерфейс для исходящего трафика алертов</label>
+                    <select id="al-source-ip">
+                      <option value="">Автоматически</option>
+                    </select>
+                    <p class="muted" style="margin:4px 0 0;font-size:12px;">Telegram и проверка бота используют выбранный исходящий IP.</p>
+                  </div>
+                  <div class="field">
+                    <label for="al-tg-token">Telegram Bot Token</label>
+                    <input type="password" id="al-tg-token" autocomplete="off" placeholder="123456:ABC-...">
+                  </div>
+                  <div class="field">
+                    <label for="al-tg-chat">Telegram USER ID / Chat ID (кому отправлять алерты)</label>
+                    <input type="text" id="al-tg-chat" autocomplete="off" placeholder="Напр. 123456789 (ID приватного чата)">
+                    <p class="muted" style="margin:4px 0 0;font-size:12px;">
+                      Получатель — личный ID (узнайте у @userinfobot) или ID группы. Нажмите «Найти chat id» — бот подберёт ID автоматически.
+                    </p>
+                  </div>
+                </div>
+                <div class="actions" style="margin-top:12px;">
+                  <button type="submit" class="btn btn-primary" id="btn-al-save">Сохранить</button>
+                  <button type="button" class="btn btn-ghost" id="btn-al-test">Отправить тест</button>
+                  <button type="button" class="btn btn-ghost" id="btn-al-check">Проверить сейчас</button>
+                  <button type="button" class="btn btn-ghost" id="btn-al-tg-status">Проверить бота</button>
+                  <button type="button" class="btn btn-ghost" id="btn-al-tg-resolve">Найти chat id</button>
+                </div>
+                <div id="al-tg-result" class="muted" style="margin-top:10px;font-size:13px;"></div>
+              </form>
+              <div id="al-check-result" class="muted" style="margin-top:10px;font-size:13px;"></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ===== DOCS ===== -->
+        <section id="view-docs" class="view hidden">
+          <div class="card">
+            <div class="card-header">
+              <h2 class="card-title">Настройка MikroTik</h2>
+              <span class="chip chip-muted">L2TP · два маршрута</span>
+            </div>
+            <div class="card-body">
+              <div class="docs">
+                <h3>1. L2TP-клиенты</h3>
+                <p>Перед выполнением команд замените <code>ВАШ_ЛОГИН</code> и <code>ВАШ_ПАРОЛЬ</code> на данные для подключения к L2TP.</p>
+                <pre class="docs-code">/interface l2tp-client add name=interface_VPN connect-to=192.168.0.95 \
+    user=ВАШ_ЛОГИН password=ВАШ_ПАРОЛЬ profile=default \
+    ipsec-secret=no add-default-route=no disabled=no
+
+/interface l2tp-client add name=interface_VPN_L2TP connect-to=192.168.0.96 \
+    user=ВАШ_ЛОГИН password=ВАШ_ПАРОЛЬ profile=default \
+    ipsec-secret=no add-default-route=no disabled=no</pre>
+
+                <h3>2. Таблицы маршрутизации</h3>
+                <pre class="docs-code">/routing table add name=to_interface_VPN fib comment="Routing via interface_VPN"
+/routing table add name=to_interface_VPN_L2TP fib comment="Routing via interface_VPN_L2TP"</pre>
+
+                <h3>3. Маршруты по умолчанию</h3>
+                <pre class="docs-code">/ip route add dst-address=0.0.0.0/0 gateway=interface_VPN routing-table=to_interface_VPN distance=1 comment="Default via interface_VPN"
+/ip route add dst-address=0.0.0.0/0 gateway=interface_VPN_L2TP routing-table=to_interface_VPN_L2TP distance=1 comment="Default via interface_VPN_L2TP"</pre>
+
+                <h3>4. NAT</h3>
+                <pre class="docs-code">/ip firewall nat add chain=srcnat out-interface=interface_VPN action=masquerade comment="NAT via interface_VPN"
+/ip firewall nat add chain=srcnat out-interface=interface_VPN_L2TP action=masquerade comment="NAT via interface_VPN_L2TP"</pre>
+              </div>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+  </div>
+
+  <!-- ======= MODAL: SERVER ======= -->
+  <div id="modal" class="modal hidden">
+    <div class="modal-box card">
+      <h2 id="modal-title">Сервер</h2>
+      <form id="server-form" novalidate>
+        <input type="hidden" id="f-id">
+        <div class="field">
+          <label for="f-name">Имя</label>
+          <input type="text" id="f-name" required>
+        </div>
+        <div class="field">
+          <label for="f-address">Адрес</label>
+          <input type="text" id="f-address" required>
+        </div>
+        <div class="two-col">
+          <div class="field">
+            <label for="f-port">Порт</label>
+            <input type="number" id="f-port" value="443" min="1" max="65535">
+          </div>
+          <div class="field">
+            <label for="f-priority">Приоритет</label>
+            <input type="number" id="f-priority" value="100" min="0">
+          </div>
+        </div>
+        <div class="field">
+          <label for="f-uuid">UUID</label>
+          <input type="text" id="f-uuid" required>
+        </div>
+        <div class="two-col">
+          <div class="field">
+            <label for="f-protocol">Protocol</label>
+            <select id="f-protocol">
+              <option value="vless">VLESS</option>
+              <option value="trojan">Trojan</option>
+              <option value="hysteria2">Hysteria2</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="f-flow">Flow</label>
+            <input type="text" id="f-flow" value="xtls-rprx-vision">
+          </div>
+        </div>
+        <div class="two-col">
+          <div class="field">
+            <label for="f-network">Network</label>
+            <select id="f-network">
+              <option>tcp</option><option>ws</option><option>grpc</option>
+              <option>xhttp</option><option>kcp</option><option>http</option>
+              <option>quic</option><option>hysteria</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="f-security">Security</label>
+            <select id="f-security">
+              <option>reality</option><option>tls</option><option>none</option>
+            </select>
+          </div>
+        </div>
+        <div class="two-col">
+          <div class="field">
+            <label for="f-fingerprint">Fingerprint</label>
+            <input type="text" id="f-fingerprint" value="chrome">
+          </div>
+          <div class="field">
+            <label for="f-alpn">ALPN</label>
+            <input type="text" id="f-alpn" value="h2,http/1.1">
+          </div>
+        </div>
+        <div class="field">
+          <label for="f-sni">SNI</label>
+          <input type="text" id="f-sni">
+        </div>
+        <div class="two-col">
+          <div class="field">
+            <label for="f-pbk">Reality public key</label>
+            <input type="text" id="f-pbk">
+          </div>
+          <div class="field">
+            <label for="f-sid">Reality short ID</label>
+            <input type="text" id="f-sid">
+          </div>
+        </div>
+        <div class="two-col">
+          <div class="field">
+            <label for="f-path">Path</label>
+            <input type="text" id="f-path" placeholder="/xhttp">
+          </div>
+          <div class="field">
+            <label for="f-mode">Mode</label>
+            <input type="text" id="f-mode" value="auto">
+          </div>
+        </div>
+        <div class="two-col">
+          <div class="field">
+            <label for="f-service-name">Service name</label>
+            <input type="text" id="f-service-name">
+          </div>
+          <div class="field">
+            <label for="f-host">Host</label>
+            <input type="text" id="f-host">
+          </div>
+        </div>
+        <label class="checkbox"><input type="checkbox" id="f-enabled" checked> Включён</label>
+        <div class="actions modal-actions">
+          <button type="button" id="btn-modal-cancel" class="btn btn-ghost">Отмена</button>
+          <button type="submit" class="btn btn-primary">Сохранить</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ======= MODAL: IMPORT ======= -->
+  <div id="import-modal" class="modal hidden">
+    <div class="modal-box card">
+      <h2>Импорт ссылки</h2>
+      <div class="field">
+        <label for="import-url">Ссылка на сервер или подписка (vless://… https://…)</label>
+        <textarea id="import-url" rows="4" placeholder="vless://…  или  https://example.com/subscription"></textarea>
+      </div>
+      <div class="actions modal-actions">
+        <button type="button" id="btn-import-cancel" class="btn btn-ghost">Отмена</button>
+        <button id="btn-import-confirm" class="btn btn-primary">Импортировать</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======= MODAL: WG PEER ======= -->
+  <div id="wg-peer-modal" class="modal hidden">
+    <div class="modal-box card">
+      <h2 id="wg-peer-title">Добавить peer</h2>
+      <form id="wg-peer-form" novalidate>
+        <input type="hidden" id="wg-pk-orig">
+        <div class="field">
+          <label for="wg-pk">Public key</label>
+          <input type="text" id="wg-pk" required>
+        </div>
+        <div class="field">
+          <label for="wg-endpoint">Endpoint</label>
+          <input type="text" id="wg-endpoint" placeholder="10.100.77.254:51820">
+        </div>
+        <div class="field">
+          <label for="wg-allowed">Allowed IPs</label>
+          <input type="text" id="wg-allowed" placeholder="10.200.0.1/32">
+        </div>
+        <div class="field">
+          <label for="wg-keepalive">Persistent keepalive</label>
+          <input type="text" id="wg-keepalive" placeholder="25">
+        </div>
+        <div class="actions modal-actions">
+          <button type="button" id="btn-wg-peer-cancel" class="btn btn-ghost">Отмена</button>
+          <button type="submit" class="btn btn-primary">Сохранить</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ======= MODAL: WG INTERFACE ======= -->
+  <div id="wg-iface-modal" class="modal hidden">
+    <div class="modal-box card">
+      <h2>Интерфейс</h2>
+      <form id="wg-iface-form" novalidate>
+        <div class="field">
+          <label for="wg-address">Address</label>
+          <input type="text" id="wg-address" placeholder="10.200.0.2/24">
+        </div>
+        <div class="field">
+          <label for="wg-port">Listen port</label>
+          <input type="number" id="wg-port" placeholder="51820">
+        </div>
+        <div class="actions modal-actions">
+          <button type="button" id="btn-wg-iface-cancel" class="btn btn-ghost">Отмена</button>
+          <button type="submit" class="btn btn-primary">Сохранить</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ======= MODAL: L2TP SETTINGS ======= -->
+  <div id="l2tp-modal" class="modal hidden">
+    <div class="modal-box card">
+      <h2>Настройки L2TP/IPsec</h2>
+      <form id="l2tp-form" novalidate>
+        <div class="field">
+          <label for="l2tp-listen-addr">Адрес сервера (left / listen)</label>
+          <input type="text" id="l2tp-listen-addr" placeholder="10.100.77.195">
+        </div>
+        <div class="field">
+          <label for="l2tp-local-ip">Local IP (шлюз пула)</label>
+          <input type="text" id="l2tp-local-ip" placeholder="10.200.2.1">
+        </div>
+        <div class="field">
+          <label for="l2tp-pool-start">Pool start</label>
+          <input type="text" id="l2tp-pool-start" placeholder="10.200.2.100">
+        </div>
+        <div class="field">
+          <label for="l2tp-pool-end">Pool end</label>
+          <input type="text" id="l2tp-pool-end" placeholder="10.200.2.200">
+        </div>
+        <div class="field">
+          <label for="l2tp-username">Логин</label>
+          <input type="text" id="l2tp-username" placeholder="vpn">
+        </div>
+        <div class="field">
+          <label for="l2tp-password">Пароль</label>
+          <input type="text" id="l2tp-password" placeholder="новый пароль">
+        </div>
+        <div class="field">
+          <label for="l2tp-psk">IPsec PSK</label>
+          <input type="text" id="l2tp-psk" placeholder="секретный ключ">
+        </div>
+        <div class="actions modal-actions">
+          <button type="button" id="btn-l2tp-cancel" class="btn btn-ghost">Отмена</button>
+          <button type="submit" class="btn btn-primary">Сохранить</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ======= MODAL: L2TP ADD USER ======= -->
+  <div id="l2tp-user-modal" class="modal hidden">
+    <div class="modal-box card">
+      <h2>Новый L2TP-пользователь</h2>
+      <form id="l2tp-user-form" novalidate>
+        <div class="field">
+          <label for="l2tp-user-name">Логин</label>
+          <input type="text" id="l2tp-user-name" placeholder="vpn2" autocomplete="off">
+        </div>
+        <div class="field">
+          <label for="l2tp-user-pass">Пароль (мин. 8 символов)</label>
+          <input type="text" id="l2tp-user-pass" placeholder="пароль" autocomplete="off">
+        </div>
+        <div class="actions modal-actions">
+          <button type="button" id="btn-l2tp-user-cancel" class="btn btn-ghost">Отмена</button>
+          <button type="submit" class="btn btn-primary">Добавить</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ======= MODAL: VM INTERFACE ======= -->
+  <div id="profile-modal" class="modal hidden">
+    <div class="modal-box card">
+      <h2 id="profile-modal-title">Новый интерфейс ВМ</h2>
+      <form id="profile-form" novalidate>
+        <input type="hidden" id="profile-id">
+        <div class="form-grid">
+          <div class="form-field">
+            <label for="profile-name">Название интерфейса</label>
+            <input type="text" id="profile-name" placeholder="Германия / Швеция">
+          </div>
+          <div class="form-field">
+            <label for="profile-server">Основной сервер</label>
+            <select id="profile-server"></select>
+          </div>
+          <div class="form-field">
+            <label for="profile-backup">Резервный сервер</label>
+            <select id="profile-backup"></select>
+          </div>
+          <div class="form-field">
+            <label for="profile-user">L2TP-пользователь</label>
+            <select id="profile-user"></select>
+          </div>
+          <div class="form-field">
+            <label for="profile-local-ip">Локальный адрес ВМ</label>
+            <input type="text" id="profile-local-ip" placeholder="Локальный IPv4 этой ВМ">
+          </div>
+          <div class="form-field">
+            <label for="profile-prefix">Префикс сети</label>
+            <input type="number" id="profile-prefix" value="24" min="1" max="32">
+          </div>
+          <div class="form-field">
+            <label for="profile-interface">Физический интерфейс</label>
+            <input type="text" id="profile-interface" value="eth0">
+          </div>
+          <div class="form-field checkbox-field">
+            <label><input type="checkbox" id="profile-enabled" checked> Интерфейс включён</label>
+          </div>
+        </div>
+        <p class="muted" style="font-size:12px;line-height:1.5;">Для основного адреса используется штатный L2TP-сервис. Для каждого дополнительного IP панель создаёт отдельный экземпляр L2TP и отдельный PPP-пул. Текущие подключения к изменяемому адресу будут переподключены.</p>
+        <div class="actions modal-actions">
+          <button type="button" id="btn-profile-cancel" class="btn btn-ghost">Отмена</button>
+          <button type="submit" class="btn btn-primary">Сохранить и применить</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ======= MODAL: BULK CHECK ======= -->
+  <div id="check-modal" class="modal hidden">
+    <div class="modal-box card modal-wide">
+      <h2>Результаты проверки</h2>
+      <div class="table-wrap">
+        <table id="check-table">
+          <thead>
+            <tr>
+              <th>Сервер</th>
+              <th>Тест конфига</th>
+              <th>Health</th>
+              <th>Лат, мс</th>
+              <th>Ошибка</th>
+            </tr>
+          </thead>
+          <tbody id="check-body"></tbody>
+        </table>
+      </div>
+      <div class="actions modal-actions">
+        <button type="button" id="btn-check-close" class="btn btn-ghost">Закрыть</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="al-edit-modal" class="modal hidden">
+    <div class="modal-box card modal-wide">
+      <h2>Редактирование .rsc</h2>
+      <p style="margin:0 0 10px;color:var(--text-secondary);font-size:13px;">
+        Формат: секции-заголовки <code># ===== N. Название =====</code>, строки <code>/ip firewall address-list</code> и
+        <code>add list=TELEGRAM_DNS comment="..." address=...</code>. Доступны TELEGRAM_DNS, DISCORD_DNS и PUBG_DNS. При сохранении создаётся резервная копия.
+      </p>
+      <textarea id="al-edit-text" class="al-edit-text" spellcheck="false"></textarea>
+      <div class="actions modal-actions">
+        <button type="button" id="btn-al-edit-cancel" class="btn btn-ghost">Отмена</button>
+        <button type="button" id="btn-al-edit-save" class="btn btn-primary">Сохранить</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="al-sync-modal" class="modal hidden">
+    <div class="modal-box card modal-wide">
+      <h2>Скрипт синхронизации для MikroTik</h2>
+      <p style="margin:0 0 10px;color:var(--text-secondary);font-size:13px;">
+        Обновляет записи в списках <code>TELEGRAM_DNS</code>, <code>DISCORD_DNS</code> и <code>PUBG_DNS</code> (домены, не зарезолвленные здесь,
+        роутер дорезолвит сам). Вставьте весь блок в терминал RouterOS.
+      </p>
+      <textarea id="al-sync-text" class="al-edit-text" spellcheck="false" readonly></textarea>
+      <div class="actions modal-actions">
+        <button type="button" id="btn-al-sync-copy" class="btn btn-primary">Копировать</button>
+        <button type="button" id="btn-al-sync-close" class="btn btn-ghost">Закрыть</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="al-mt-io-modal" class="modal hidden">
+    <div class="modal-box card modal-wide">
+      <h2 id="al-mt-io-title">Импорт записей</h2>
+      <p style="margin:0 0 10px;color:var(--text-secondary);font-size:13px;">
+        Каждая строка — <code>add list=ИМЯ comment="..." address=...</code>. Импорт добавит новые записи и
+        обновит комментарии у совпавших адресов, не удаляя остальные.
+      </p>
+      <textarea id="al-mt-io-text" class="al-edit-text mono" spellcheck="false" placeholder="add list=TELEGRAM_DNS address=telegram.org"></textarea>
+      <div class="actions modal-actions">
+        <button type="button" id="btn-al-mt-io-copy" class="btn btn-primary hidden">Копировать</button>
+        <button type="button" id="btn-al-mt-io-ok" class="btn btn-primary">Импортировать</button>
+        <button type="button" id="btn-al-mt-io-close" class="btn btn-ghost">Закрыть</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="al-preview-modal" class="modal hidden">
+    <div class="modal-box card modal-wide">
+      <h2>Применение на MikroTik — предпросмотр</h2>
+      <p id="al-preview-summary" style="margin:0 0 6px;font-weight:600;"></p>
+      <p id="al-preview-lists" class="muted" style="margin:0 0 10px;font-size:13px;"></p>
+      <div class="preview-cols">
+        <div>
+          <h3 class="preview-title add" id="al-preview-add-title">Добавится</h3>
+          <pre id="al-preview-adds" class="preview-list mono">…</pre>
+        </div>
+        <div>
+          <h3 class="preview-title del" id="al-preview-remove-title">Удалится</h3>
+          <pre id="al-preview-removes" class="preview-list mono">…</pre>
+        </div>
+      </div>
+      <div class="actions modal-actions">
+        <button type="button" id="btn-al-preview-cancel" class="btn btn-ghost">Отмена</button>
+        <button type="button" id="btn-al-preview-apply" class="btn btn-primary">Применить на MikroTik</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="al-backups-modal" class="modal hidden">
+    <div class="modal-box card modal-wide">
+      <h2>Бэкапы .rsc</h2>
+      <p class="muted" style="margin:0 0 10px;font-size:13px;">
+        Автоматические копии сохраняются при каждом сохранении .rsc (хранится до 20 последних).
+        «Просмотр» открывает содержимое в редакторе, «Восстановить» — возвращает файл (текущий сохранится бэкапом).
+      </p>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Файл</th>
+              <th>Размер</th>
+              <th>Время</th>
+              <th style="width:230px"></th>
+            </tr>
+          </thead>
+          <tbody id="al-backups-body"><tr><td colspan="4" class="muted">Загрузка…</td></tr></tbody>
+        </table>
+      </div>
+      <div class="actions modal-actions">
+        <button type="button" id="btn-al-backups-close" class="btn btn-ghost">Закрыть</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="clear-data-modal" class="modal hidden">
+    <div class="modal-box card">
+      <h2>Удалить данные</h2>
+      <p class="muted" style="margin:0 0 12px;font-size:13px;">
+        Отметьте разделы, которые нужно очистить. Действие необратимо — после подтверждения данные удаляются без восстановления.
+      </p>
+      <div id="clear-data-sections" class="clear-sections"></div>
+
+      <div class="clear-retention" style="margin-top:16px;padding-top:14px;border-top:1px solid var(--border);">
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+          <label for="clear-retention-days" style="font-size:13px;color:var(--text-secondary);">Хранить бэкапы не дольше (дней):</label>
+          <input type="number" id="clear-retention-days" min="1" max="365" style="width:90px;padding:6px 8px;border:1px solid var(--border);border-radius:8px;background:var(--input-bg,#fff);">
+          <button type="button" id="btn-retention-save" class="btn btn-ghost btn-sm">Сохранить</button>
+          <button type="button" id="btn-retention-apply" class="btn btn-ghost btn-sm">Удалить старые бэкапы</button>
+        </div>
+        <p class="muted" style="margin:8px 0 0;font-size:12px;">
+          Правило применяется автоматически при старте сервиса. «Удалить старые бэкапы» — выполнить сейчас.
+        </p>
+      </div>
+
+      <div id="clear-data-result" class="muted" style="margin-top:10px;font-size:13px;white-space:pre-wrap;"></div>
+      <div class="actions modal-actions">
+        <button type="button" id="btn-clear-data-cancel" class="btn btn-ghost">Отмена</button>
+        <button type="button" id="btn-clear-data-confirm" class="btn btn-danger">Удалить выбранное</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="confirm-modal" class="modal hidden">
+    <div class="modal-box card confirm-box">
+      <div class="confirm-icon">&#9888;&#65039;</div>
+      <h2 id="confirm-title">Удалить безвозвратно</h2>
+      <p id="confirm-message" class="confirm-message"></p>
+      <div class="actions modal-actions">
+        <button type="button" id="btn-confirm-cancel" class="btn btn-ghost">Отмена</button>
+        <button type="button" id="btn-confirm-ok" class="btn btn-danger">Ок</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="hidden" aria-live="polite"></div>
+
+  <script src="/static/app.js?v=1.0.0"></script>
+</body>
+</html>
