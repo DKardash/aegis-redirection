@@ -170,7 +170,7 @@ def rollback(transaction):
     for suffix in ('', '-wal', '-shm'):
         current = Path(str(database) + suffix)
         if current.exists():
-            current.rename(transaction / ('failed-database' + suffix))
+            shutil.move(str(current), str(transaction / ('failed-database' + suffix)))
     shutil.copy2(backup / 'gateway.db', database)
     for index, name in enumerate(state['paths']):
         current, saved = Path(name), backup / 'network' / str(index)
@@ -193,6 +193,10 @@ def rollback(transaction):
 
 def update(root, check_only=False):
     env, port = installed_environment(root)
+    installed = root / 'manager/VERSION'
+    if not check_only and installed.exists() and installed.read_text().strip() == (RELEASE / 'VERSION').read_text().strip():
+        print('Already running this release; no changes required.')
+        return
     transaction, runtime, version = stage(root, env)
     if check_only:
         print(f'CHECK OK: v{version}; services untouched. Staging retained at {transaction}')
@@ -212,7 +216,8 @@ def update(root, check_only=False):
         run(runtime / 'bin/python', '-m', 'app.upgrade', cwd=root / 'manager', env=env, timeout=120)
         run('systemctl', 'start', 'manager')
         wait_ready(port, version)
-        run('systemctl', 'is-active', '--quiet', 'manager', 'xray', 'xl2tpd')
+        for service in ('manager', 'xray', 'xl2tpd'):
+            run('systemctl', 'is-active', '--quiet', service)
         state['phase'] = 'complete'
         save_json(transaction / 'state.json', state)
         (root / 'updates/last-successful').write_text(transaction.name + '\n')
@@ -227,6 +232,7 @@ def update(root, check_only=False):
 
 
 def main():
+    os.umask(0o077)
     parser = argparse.ArgumentParser(description='Aegis Redirection updater; existing Ubuntu/systemd gateway only')
     parser.add_argument('--check', action='store_true', help='Stage and validate without stopping services')
     parser.add_argument('--root', default='/opt/xray-gateway')
