@@ -177,6 +177,10 @@ function switchView(name) {
 
 /* ===== Panel releases ===== */
 let updateRelease = null, updateBusy = false, updateChecking = false, updateTimer = null;
+function setUpdateMessage(message = '') {
+  $('update-message').textContent = message;
+  $('update-message').classList.toggle('hidden', !message);
+}
 function renderUpdateStatus(data) {
   $("sidebar-version").textContent = 'v' + data.current_version;
   $("update-current").textContent = 'v' + data.current_version;
@@ -187,17 +191,12 @@ function renderUpdateStatus(data) {
   $("btn-update-install").disabled = updateBusy || !r?.available || updateChecking;
   $("btn-update-check").disabled = updateBusy || updateChecking;
   const badge = $("update-badge");
-  badge.textContent = updateBusy ? "Обновление выполняется" : r ? (r.available ? "Доступно обновление" : "Установлена актуальная версия") : "Версия не проверена";
+  badge.textContent = updateBusy ? "Обновление выполняется" : updateChecking ? "Проверяем версию…" : r ? (r.available ? "Доступно обновление" : "Установлена актуальная версия") : "Версия не проверена";
   badge.className = 'chip ' + (updateBusy || r?.available ? 'chip-warning' : r ? 'chip-success' : 'chip-muted');
   if (r) {
     $("update-latest").textContent = 'v' + r.latest_version;
-    $("update-notes").textContent = r.notes || 'Описание изменений не опубликовано.';
-    $("update-check-time").textContent = 'Последняя проверка: ' + new Date(r.checked_at * 1000).toLocaleString();
-    const link = $("update-release-link");
-    link.href = r.release_url; link.classList.remove('hidden');
   }
-  if (job) $("update-message").textContent = job.message;
-  else if (r) $("update-message").textContent = r.available ? 'Новый релиз готов к установке.' : 'Обновление не требуется.';
+  setUpdateMessage(job?.status === 'failed' ? 'Не удалось обновить панель. Повторите попытку.' : '');
   if (job?.status === 'complete' && sessionStorage.getItem('aegis-update-request') === job.id) {
     sessionStorage.removeItem('aegis-update-request');
     location.reload();
@@ -211,7 +210,7 @@ async function loadUpdateStatus() {
   try { renderUpdateStatus(await api('/api/updates/status')); }
   catch (e) {
     if (e.status === 401 || e.status === 403) { clearTimeout(updateTimer); return; }
-    $('update-message').textContent = updateBusy ? 'Панель перезапускается. Ожидаем восстановления соединения…' : 'Не удалось получить состояние обновлений: ' + e.message;
+    setUpdateMessage(updateBusy ? 'Панель перезапускается…' : 'Не удалось получить состояние обновлений: ' + e.message);
     if (updateBusy || !$('view-updates').classList.contains('hidden')) updateTimer = setTimeout(loadUpdateStatus, 5000);
   }
 }
@@ -220,11 +219,12 @@ async function checkPanelUpdate() {
   updateChecking = true;
   $('btn-update-check').disabled = true;
   $('btn-update-install').disabled = true;
-  $('update-message').textContent = 'Проверяем стабильный релиз на GitHub…';
+  setUpdateMessage();
+  $('update-badge').textContent = 'Проверяем версию…';
   try { const data = await api('/api/updates/check', 'POST'); updateChecking = false; renderUpdateStatus(data); }
   catch (e) {
     updateRelease = null;
-    $('update-message').textContent = e.message;
+    setUpdateMessage(e.message);
     $('update-badge').textContent = 'Проверка недоступна';
     $('update-badge').className = 'chip chip-warning';
   } finally { updateChecking = false; $('btn-update-check').disabled = updateBusy; }
@@ -236,11 +236,13 @@ async function installPanelUpdate() {
   try {
     const job = await api('/api/updates/install', 'POST', { tag: updateRelease.tag });
     sessionStorage.setItem('aegis-update-request', job.id);
-    $('update-message').textContent = job.message;
+    setUpdateMessage();
+    $('update-badge').textContent = 'Обновление выполняется';
     clearTimeout(updateTimer); updateTimer = setTimeout(loadUpdateStatus, 1500);
   } catch (e) {
-    updateBusy = false; $('update-message').textContent = e.message;
+    updateBusy = false;
     await loadUpdateStatus();
+    setUpdateMessage(e.message);
   }
 }
 
