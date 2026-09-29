@@ -55,6 +55,14 @@ class UpgradeTests(unittest.TestCase):
 
 
 class RollbackTests(unittest.TestCase):
+    def test_recovery_allowed_between_directory_swaps(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            (root / 'updates').mkdir()
+            updater.validate_root(root, recovery=True)
+            with self.assertRaises(ValueError):
+                updater.validate_root(root)
+
     def test_rollback_restores_code_database_and_network(self):
         with tempfile.TemporaryDirectory() as folder:
             root = Path(folder)

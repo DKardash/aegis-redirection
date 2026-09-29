@@ -219,8 +219,8 @@ def update(root, check_only=False):
         for service in ('manager', 'xray', 'xl2tpd'):
             run('systemctl', 'is-active', '--quiet', service)
         state['phase'] = 'complete'
-        save_json(transaction / 'state.json', state)
         (root / 'updates/last-successful').write_text(transaction.name + '\n')
+        save_json(transaction / 'state.json', state)
         print(f'UPDATE OK: v{version}. Rollback: sudo python3 {root}/manager/scripts/updater.py --rollback {transaction.name}')
     except BaseException:
         if (transaction / 'state.json').exists():
@@ -229,6 +229,16 @@ def update(root, check_only=False):
         elif stopped:
             run('systemctl', 'start', 'manager')
         raise
+
+
+def validate_root(root, recovery=False):
+    if root == Path('/'):
+        raise ValueError('An installation root is required')
+    if recovery:
+        if not (root / 'updates').is_dir():
+            raise ValueError('No saved update transactions found')
+    elif not (root / 'manager/app').is_dir() or not (root / 'venv/bin/python').exists():
+        raise ValueError('An existing gateway installation is required; nothing was changed')
 
 
 def main():
@@ -242,8 +252,10 @@ def main():
         parser.error('Linux root privileges required')
     import fcntl
     root = Path(args.root).resolve()
-    if root == Path('/') or not (root / 'manager/app').is_dir() or not (root / 'venv/bin/python').exists():
-        parser.error('An existing gateway installation is required; nothing was changed')
+    try:
+        validate_root(root, recovery=bool(args.rollback))
+    except ValueError as error:
+        parser.error(str(error))
     updates = root / 'updates'
     updates.mkdir(mode=0o700, exist_ok=True)
     with (updates / 'lock').open('w') as lock:
