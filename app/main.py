@@ -13,6 +13,7 @@ from . import addresslists, alerts, clear_data, failover, mikrotik, monitor, pro
 from .config import settings
 from .db import audit, get_setting, init_db, set_setting
 from .routers import addresslists as addresslists_router, alerts as alerts_router, admin as admin_router, auth, l2tp, mikrotik as mikrotik_router, monitor as monitor_router, profiles as profiles_router, servers, status
+from .routers import updates as updates_router
 
 logger = logging.getLogger("xray-gateway")
 
@@ -133,6 +134,7 @@ app.include_router(alerts_router.router)
 app.include_router(mikrotik_router.router)
 app.include_router(profiles_router.router)
 app.include_router(admin_router.router)
+app.include_router(updates_router.router)
 
 app.mount("/static", StaticFiles(directory=str(WEB_DIR / "static")), name="static")
 

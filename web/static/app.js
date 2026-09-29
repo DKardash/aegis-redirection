@@ -150,6 +150,7 @@ function svcBadge(state) {
 
 /* ===== Views / navigation ===== */
 const VIEW_TITLES = { overview: "Обзор", servers: "Серверы", interfaces: "Интерфейсы", password: "Смена пароля", docs: "Документация", addresslists: "Адрес Лист", audit: "Журнал", monitor: "Мониторинг", alerts: "Алерты" };
+VIEW_TITLES.updates = "Проверить обновление";
 
 function closeNav() {
   $("side-nav").classList.remove("open");
@@ -171,6 +172,76 @@ function switchView(name) {
   if (name === "audit") loadAudit();
   if (name === "monitor") { loadMonitor(); loadTrafficChart(); loadMikrotik(); loadRouterBackup(); }
   if (name === "alerts") loadAlerts();
+  if (name === "updates") { loadUpdateStatus(); checkPanelUpdate(); }
+}
+
+/* ===== Panel releases ===== */
+let updateRelease = null, updateBusy = false, updateChecking = false, updateTimer = null;
+function renderUpdateStatus(data) {
+  $("sidebar-version").textContent = 'v' + data.current_version;
+  $("update-current").textContent = 'v' + data.current_version;
+  const job = data.job;
+  updateBusy = !!job && ['starting', 'running'].includes(job.status);
+  if (data.release) updateRelease = data.release;
+  const r = updateRelease;
+  $("btn-update-install").disabled = updateBusy || !r?.available || updateChecking;
+  $("btn-update-check").disabled = updateBusy || updateChecking;
+  const badge = $("update-badge");
+  badge.textContent = updateBusy ? "Обновление выполняется" : r ? (r.available ? "Доступно обновление" : "Установлена актуальная версия") : "Версия не проверена";
+  badge.className = 'chip ' + (updateBusy || r?.available ? 'chip-warning' : r ? 'chip-success' : 'chip-muted');
+  if (r) {
+    $("update-latest").textContent = 'v' + r.latest_version;
+    $("update-notes").textContent = r.notes || 'Описание изменений не опубликовано.';
+    $("update-check-time").textContent = 'Последняя проверка: ' + new Date(r.checked_at * 1000).toLocaleString();
+    const link = $("update-release-link");
+    link.href = r.release_url; link.classList.remove('hidden');
+  }
+  if (job) $("update-message").textContent = job.message;
+  else if (r) $("update-message").textContent = r.available ? 'Новый релиз готов к установке.' : 'Обновление не требуется.';
+  if (job?.status === 'complete' && sessionStorage.getItem('aegis-update-request') === job.id) {
+    sessionStorage.removeItem('aegis-update-request');
+    location.reload();
+  }
+  if (updateBusy || !$('view-updates').classList.contains('hidden')) {
+    clearTimeout(updateTimer); updateTimer = setTimeout(loadUpdateStatus, 4000);
+  }
+}
+async function loadUpdateStatus() {
+  if (!token) return;
+  try { renderUpdateStatus(await api('/api/updates/status')); }
+  catch (e) {
+    if (e.status === 401 || e.status === 403) { clearTimeout(updateTimer); return; }
+    $('update-message').textContent = updateBusy ? 'Панель перезапускается. Ожидаем восстановления соединения…' : 'Не удалось получить состояние обновлений: ' + e.message;
+    if (updateBusy || !$('view-updates').classList.contains('hidden')) updateTimer = setTimeout(loadUpdateStatus, 5000);
+  }
+}
+async function checkPanelUpdate() {
+  if (updateChecking || updateBusy) return;
+  updateChecking = true;
+  $('btn-update-check').disabled = true;
+  $('btn-update-install').disabled = true;
+  $('update-message').textContent = 'Проверяем стабильный релиз на GitHub…';
+  try { const data = await api('/api/updates/check', 'POST'); updateChecking = false; renderUpdateStatus(data); }
+  catch (e) {
+    updateRelease = null;
+    $('update-message').textContent = e.message;
+    $('update-badge').textContent = 'Проверка недоступна';
+    $('update-badge').className = 'chip chip-warning';
+  } finally { updateChecking = false; $('btn-update-check').disabled = updateBusy; }
+}
+async function installPanelUpdate() {
+  if (updateBusy || !updateRelease?.available) return;
+  if (!confirm('Обновить панель до v' + updateRelease.latest_version + '? Будет создана резервная копия. Возможно кратковременное прерывание подключений.')) return;
+  updateBusy = true; $('btn-update-install').disabled = true; $('btn-update-check').disabled = true;
+  try {
+    const job = await api('/api/updates/install', 'POST', { tag: updateRelease.tag });
+    sessionStorage.setItem('aegis-update-request', job.id);
+    $('update-message').textContent = job.message;
+    clearTimeout(updateTimer); updateTimer = setTimeout(loadUpdateStatus, 1500);
+  } catch (e) {
+    updateBusy = false; $('update-message').textContent = e.message;
+    await loadUpdateStatus();
+  }
 }
 
 /* ===== Status / Overview ===== */
@@ -1827,6 +1898,7 @@ async function saveServerForm(e) {
 
 /* ===== Auth ===== */
 function showLogin() {
+  clearTimeout(updateTimer);
   token = "";
   localStorage.removeItem("xgw_token");
   $("main-view").classList.add("hidden");
@@ -1836,7 +1908,7 @@ function showLogin() {
 async function showMain() {
   $("login-view").classList.add("hidden");
   $("main-view").classList.remove("hidden");
-  await Promise.all([loadStatus(), loadServers(), loadAudit(), loadTraffic()]);
+  await Promise.all([loadStatus(), loadServers(), loadAudit(), loadTraffic(), loadUpdateStatus()]);
   startTrafficPoll();
 }
 
@@ -2424,6 +2496,10 @@ startTrafficPoll();
 loadMonitorServers();
 
 /* ===== init ===== */
+$('btn-version-menu').addEventListener('click', () => switchView('updates'));
+$('btn-update-check').addEventListener('click', checkPanelUpdate);
+$('btn-update-install').addEventListener('click', installPanelUpdate);
+
 (async function init() {
   if (token) {
     try {

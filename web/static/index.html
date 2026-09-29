@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/static/style.css?v=25">
+  <link rel="stylesheet" href="/static/style.css?v=3.0.0">
 </head>
 <body>
   <!-- ======= LOGIN ======= -->
@@ -81,7 +81,16 @@
           <svg viewBox="0 0 256 256" class="nav-icon"><path d="M224 120v16a104 104 0 0 1-96 103.9V136h56l-32-32 32-32H128V8.1A104 104 0 0 1 224 120Z"/></svg>
           <span>Алерты</span>
         </button>
+        <button class="nav-item" data-view="updates" type="button">
+          <svg viewBox="0 0 24 24" class="nav-icon"><path d="M12 3a9 9 0 1 0 8.5 12h-2.2A7 7 0 1 1 17 7l-4 4h8V3l-2.6 2.6A9 9 0 0 0 12 3Z"/></svg>
+          <span>Проверить обновление</span>
+        </button>
       </nav>
+      <button id="btn-version-menu" class="version-menu" type="button" title="Версия и обновления">
+        <span class="version-menu__mark" aria-hidden="true">↗</span>
+        <span class="version-menu__info"><strong>Aegis Redirection</strong><span><i></i> Стабильная версия <b id="sidebar-version">…</b></span></span>
+        <span class="version-menu__arrow" aria-hidden="true">›</span>
+      </button>
     </aside>
     <div class="backdrop" id="nav-backdrop"></div>
 
@@ -828,6 +837,30 @@
             </div>
           </div>
         </section>
+        <section id="view-updates" class="view hidden">
+          <div class="card update-hero">
+            <div class="update-hero__top"><span class="update-eyebrow">AEGIS REDIRECTION</span><span id="update-badge" class="chip chip-muted">Проверка версии</span></div>
+            <h2>Обновления панели</h2>
+            <p class="muted">Новые возможности и исправления из официальных релизов проекта.</p>
+            <div class="update-versions">
+              <div><span>Установлено на этой ВМ</span><strong id="update-current">—</strong></div>
+              <span class="update-versions__arrow" aria-hidden="true">→</span>
+              <div><span>Последний стабильный релиз</span><strong id="update-latest">—</strong></div>
+            </div>
+            <div class="update-actions">
+              <button id="btn-update-check" class="btn btn-primary" type="button">Проверить обновление</button>
+              <button id="btn-update-install" class="btn btn-outline" type="button" disabled>Обновить панель</button>
+              <a id="update-release-link" class="btn btn-ghost hidden" target="_blank" rel="noopener noreferrer">Открыть релиз ↗</a>
+            </div>
+            <p id="update-check-time" class="muted">Версия ещё не проверялась</p>
+          </div>
+          <div class="card update-progress" role="status" aria-live="polite">
+            <h3>Состояние обновления</h3>
+            <p id="update-message">Нажмите «Проверить обновление», чтобы узнать о новых версиях.</p>
+            <p class="muted">Перед установкой создаётся резервная копия. Настройки, пользователи и ваши адрес-листы сохраняются. При применении панель и подключения могут кратковременно перезапуститься.</p>
+          </div>
+          <div class="card"><h3>Что нового</h3><pre id="update-notes" class="update-notes">Описание появится после проверки.</pre></div>
+        </section>
       </main>
     </div>
   </div>
@@ -1279,6 +1312,6 @@
 
   <div id="toast" class="hidden" aria-live="polite"></div>
 
-  <script src="/static/app.js?v=1.0.1"></script>
+  <script src="/static/app.js?v=3.0.0"></script>
 </body>
 </html>
