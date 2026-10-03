@@ -238,6 +238,14 @@ body {
 .update-versions__arrow { color: #59768b; font-size: 28px; }
 .update-actions { display: flex; flex-wrap: wrap; gap: 12px; }
 #update-message { margin: 18px 0 0; }
+.zerotier-config { margin: 24px 0 14px; }
+.zerotier-actions { margin-bottom: 26px; }
+.zerotier-details { display: flex; flex-wrap: wrap; gap: 12px; }
+.zerotier-details > div { display: flex; flex-direction: column; gap: 6px; min-width: 150px; padding: 14px 16px; border: 1px solid #263748; border-radius: 12px; background: #0c1520; }
+.zerotier-details span { color: #90a5b6; font-size: 12px; }
+.zerotier-details strong { overflow-wrap: anywhere; font-size: 14px; }
+.zt-panel-link { display: inline-block; margin-top: 18px; color: #76d9ce; }
+#zt-message { margin: 18px 0 0; }
 #view-updates > .card { margin-bottom: 20px; }
 .nav-item {
   display: flex;

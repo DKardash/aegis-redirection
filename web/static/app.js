@@ -151,6 +151,7 @@ function svcBadge(state) {
 /* ===== Views / navigation ===== */
 const VIEW_TITLES = { overview: "Обзор", servers: "Серверы", interfaces: "Интерфейсы", password: "Смена пароля", docs: "Документация", addresslists: "Адрес Лист", audit: "Журнал", monitor: "Мониторинг", alerts: "Алерты" };
 VIEW_TITLES.updates = "Проверить обновление";
+VIEW_TITLES.zerotier = "ZeroTier";
 
 function closeNav() {
   $("side-nav").classList.remove("open");
@@ -173,6 +174,61 @@ function switchView(name) {
   if (name === "monitor") { loadMonitor(); loadTrafficChart(); loadMikrotik(); loadRouterBackup(); }
   if (name === "alerts") loadAlerts();
   if (name === "updates") { loadUpdateStatus(); checkPanelUpdate(); }
+  if (name === "zerotier") loadZeroTierStatus();
+}
+
+/* ===== ZeroTier remote access ===== */
+let zeroTierBusy = false, zeroTierTimer = null;
+async function loadZeroTierStatus() {
+  if (!token) return;
+  try {
+    const data = await api('/api/zerotier/status');
+    $('zt-network-id').value = data.network_id || '';
+    $('zt-cidr').value = data.cidr || '10.241.0.0/16';
+    const active = data.network_status === 'OK';
+    const badge = $('zt-badge');
+    const labels = { OK: 'Подключено', ACCESS_DENIED: 'Ожидает подтверждения', REQUESTING_CONFIGURATION: 'Получение адреса', NOT_JOINED: 'Не подключено' };
+    badge.textContent = zeroTierBusy ? 'Подключаем…' : labels[data.network_status] || data.network_status || 'Не подключено';
+    badge.className = 'chip ' + (active ? 'chip-success' : zeroTierBusy || data.network_status === 'ACCESS_DENIED' ? 'chip-warning' : 'chip-muted');
+    $('zt-service').textContent = data.service === 'active' ? 'Работает' : data.installed ? (data.service || 'Остановлена') : 'Не установлена';
+    $('zt-node-id').textContent = data.node_id || '—';
+    const address = (data.assigned_ips || []).find(value => /^\d{1,3}(?:\.\d{1,3}){3}\//.test(value));
+    const ip = address ? address.split('/')[0] : '';
+    $('zt-address').textContent = ip || '—';
+    const link = $('zt-panel-link');
+    if (ip && ip.split('.').every(part => Number(part) >= 0 && Number(part) <= 255)) { link.href = 'http://' + ip + ':8790'; link.classList.remove('hidden'); }
+    else link.classList.add('hidden');
+    const job = data.job;
+    zeroTierBusy = job?.status === 'running';
+    const message = job?.status === 'failed' ? job.message : data.network_status === 'ACCESS_DENIED' ? 'Откройте ZeroTier Central и подтвердите это устройство по его Node ID.' : job?.status === 'complete' && !active ? job.message : '';
+    $('zt-message').textContent = message;
+    $('zt-message').classList.toggle('hidden', !message);
+    $('btn-zt-connect').disabled = zeroTierBusy || active || !data.network_id;
+    if (zeroTierBusy || !$('view-zerotier').classList.contains('hidden')) {
+      clearTimeout(zeroTierTimer); zeroTierTimer = setTimeout(loadZeroTierStatus, 5000);
+    }
+  } catch (e) {
+    $('zt-message').textContent = e.message;
+    $('zt-message').classList.remove('hidden');
+  }
+}
+async function saveZeroTierConfig() {
+  try {
+    const result = await api('/api/zerotier/config', 'POST', { network_id: $('zt-network-id').value, cidr: $('zt-cidr').value });
+    $('zt-network-id').value = result.network_id; $('zt-cidr').value = result.cidr;
+    toast('Параметры сети сохранены'); await loadZeroTierStatus();
+  } catch (e) { toast('ZeroTier: ' + e.message, true); }
+}
+async function connectZeroTier() {
+  if (zeroTierBusy) return;
+  try {
+    await api('/api/zerotier/config', 'POST', { network_id: $('zt-network-id').value, cidr: $('zt-cidr').value });
+    zeroTierBusy = true; $('btn-zt-connect').disabled = true;
+    $('zt-message').textContent = 'Подключаем ZeroTier. Панель останется доступной.';
+    $('zt-message').classList.remove('hidden');
+    await api('/api/zerotier/connect', 'POST');
+    clearTimeout(zeroTierTimer); zeroTierTimer = setTimeout(loadZeroTierStatus, 1500);
+  } catch (e) { zeroTierBusy = false; toast('ZeroTier: ' + e.message, true); await loadZeroTierStatus(); }
 }
 
 /* ===== Panel releases ===== */
@@ -2501,6 +2557,8 @@ loadMonitorServers();
 $('btn-version-menu').addEventListener('click', () => switchView('updates'));
 $('btn-update-check').addEventListener('click', checkPanelUpdate);
 $('btn-update-install').addEventListener('click', installPanelUpdate);
+$('btn-zt-save').addEventListener('click', saveZeroTierConfig);
+$('btn-zt-connect').addEventListener('click', connectZeroTier);
 
 (async function init() {
   if (token) {
