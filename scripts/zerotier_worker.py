@@ -28,7 +28,15 @@ def execute(root, job_id, network_id):
                 subprocess.run(['curl', '--fail', '--silent', '--show-error', '--location',
                     '--proto', '=https', '--retry', '3', '--connect-timeout', '15', '--max-time', '120',
                     'https://install.zerotier.com', '-o', str(installer)], stdout=output, stderr=output, check=True)
-                subprocess.run(['/bin/bash', str(installer)], stdout=output, stderr=output, check=True, timeout=600)
+                # Keep the system package keyring readable by apt's unprivileged _apt user.
+                previous_umask = os.umask(0o022)
+                try:
+                    keyring = Path('/usr/share/keyrings/zerotier-debian-package-key.gpg')
+                    if keyring.exists():
+                        keyring.chmod(0o644)
+                    subprocess.run(['/bin/bash', str(installer)], stdout=output, stderr=output, check=True, timeout=600)
+                finally:
+                    os.umask(previous_umask)
         state('running', 'Запускаем службу и подключаем сеть…')
         subprocess.run(['systemctl', 'enable', '--now', 'zerotier-one'], check=True, timeout=30)
         result = subprocess.run(['zerotier-cli', 'join', network_id], capture_output=True, text=True, check=True, timeout=30)
