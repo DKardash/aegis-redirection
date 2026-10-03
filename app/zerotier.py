@@ -94,8 +94,8 @@ def start_connect():
         if not cfg['network_id']:
             raise ValueError('Сначала сохраните Network ID')
         current = status()
-        if current['network_status'] == 'OK':
-            raise ValueError('Эта ВМ уже подключена к сети')
+        if current['network_status'] in ('OK', 'ACCESS_DENIED', 'REQUESTING_CONFIGURATION'):
+            raise ValueError('Эта ВМ уже подключена или ожидает подтверждения в ZeroTier Central')
         job = current.get('job')
         if unit_active() or (job and job.get('status') == 'running'):
             raise ValueError('Подключение уже выполняется')

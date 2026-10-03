@@ -200,10 +200,11 @@ async function loadZeroTierStatus() {
     else link.classList.add('hidden');
     const job = data.job;
     zeroTierBusy = job?.status === 'running';
-    const message = job?.status === 'failed' ? job.message : data.network_status === 'ACCESS_DENIED' ? 'Откройте ZeroTier Central и подтвердите это устройство по его Node ID.' : job?.status === 'complete' && !active ? job.message : '';
+    const joined = ['OK', 'ACCESS_DENIED', 'REQUESTING_CONFIGURATION'].includes(data.network_status);
+    const message = job?.status === 'failed' ? job.message : data.network_status === 'ACCESS_DENIED' ? 'Откройте ZeroTier Central и подтвердите это устройство по его Node ID.' : active && !ip ? 'В ZeroTier Central задайте пул адресов для указанной подсети.' : job?.status === 'complete' && !active ? job.message : '';
     $('zt-message').textContent = message;
     $('zt-message').classList.toggle('hidden', !message);
-    $('btn-zt-connect').disabled = zeroTierBusy || active || !data.network_id;
+    $('btn-zt-connect').disabled = zeroTierBusy || joined || !data.network_id;
     if (zeroTierBusy || !$('view-zerotier').classList.contains('hidden')) {
       clearTimeout(zeroTierTimer); zeroTierTimer = setTimeout(loadZeroTierStatus, 5000);
     }
