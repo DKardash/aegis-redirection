@@ -71,6 +71,19 @@ def _network_data(network_id):
         return {}
 
 
+def original_uplink():
+    try:
+        routes = json.loads(_run('ip', '-j', 'route', 'get', '1.1.1.1').stdout)
+        route = routes[0]
+        address = ipaddress.ip_address(route.get('src', ''))
+        interface = route.get('dev', '')
+        if address.version != 4 or not re.fullmatch(r'[A-Za-z0-9_.:-]{1,15}', interface):
+            raise ValueError('No original IPv4 uplink found')
+        if interface == 'lo' or interface.startswith(('ppp', 'zt', 'wg', 'tun', 'tap')):
+            raise ValueError('Default route does not use the original physical uplink')
+        return {'uplink_ip': str(address), 'uplink_interface': interface}
+    except (OSError, ValueError, IndexError, KeyError, subprocess.SubprocessError, json.JSONDecodeError):
+        return {'uplink_ip': '', 'uplink_interface': ''}
 def status():
     cfg = config()
     service = 'inactive'
@@ -82,7 +95,7 @@ def status():
     data = _network_data(cfg['network_id'])
     network = data.get('network') or {}
     state = network.get('status', 'NOT_JOINED' if not network else 'UNKNOWN')
-    return {**cfg, 'installed': bool(shutil.which('zerotier-cli')), 'service': service,
+    return {**cfg, **original_uplink(), 'installed': bool(shutil.which('zerotier-cli')), 'service': service,
             'node_id': data.get('node_id', ''), 'network_status': state,
             'device': network.get('portDeviceName', ''),
             'assigned_ips': network.get('assignedAddresses', []), 'job': _job()}
@@ -94,8 +107,8 @@ def start_connect():
         if not cfg['network_id']:
             raise ValueError('Сначала сохраните Network ID')
         current = status()
-        if current['network_status'] in ('OK', 'ACCESS_DENIED', 'REQUESTING_CONFIGURATION'):
-            raise ValueError('Эта ВМ уже подключена или ожидает подтверждения в ZeroTier Central')
+        if current['network_status'] == 'OK':
+            raise ValueError('Эта ВМ уже подключена к ZeroTier')
         job = current.get('job')
         if unit_active() or (job and job.get('status') == 'running'):
             raise ValueError('Подключение уже выполняется')
@@ -109,14 +122,47 @@ def start_connect():
         temp = path.with_suffix('.tmp')
         temp.write_text(json.dumps(state), encoding='utf-8')
         temp.replace(path)
-        try:
-            subprocess.run(['systemd-run', '--quiet', '--collect', '--unit=' + UNIT,
-                '--property=Type=exec', '--property=UMask=0077', '--property=RuntimeMaxSec=900',
-                '/usr/bin/python3', str(work / 'worker.py'), str(ROOT), job_id, cfg['network_id']],
-                capture_output=True, text=True, check=True, timeout=15)
-        except (OSError, subprocess.SubprocessError) as exc:
-            state.update(status='failed', message='Не удалось запустить подключение', updated_at=time.time())
-            temp.write_text(json.dumps(state), encoding='utf-8')
-            temp.replace(path)
-            raise ValueError(state['message']) from exc
-        return state
+        mode = 'retry' if current['network_status'] in ('ACCESS_DENIED', 'REQUESTING_CONFIGURATION') else 'connect'
+        if mode == 'retry':
+            state['message'] = 'Повторно отправляем запрос в ZeroTier…'
+        return _launch_worker(work, job_id, cfg['network_id'], mode, state, temp, path)
+
+
+def start_apply_original_ip():
+    with _LOCK:
+        cfg = config()
+        if not cfg['network_id']:
+            raise ValueError('Сначала сохраните Network ID')
+        if not shutil.which('zerotier-cli'):
+            raise ValueError('Сначала установите ZeroTier и подключите сеть')
+        uplink = original_uplink()
+        if not uplink['uplink_ip']:
+            raise ValueError('Не удалось определить исходный физический IP этой ВМ')
+        current = status()
+        if unit_active() or (current.get('job') and current['job'].get('status') == 'running'):
+            raise ValueError('Настройка ZeroTier уже выполняется')
+        folder = ROOT / 'updates'
+        job_id = uuid.uuid4().hex
+        work = folder / 'zerotier-jobs' / job_id
+        work.mkdir(mode=0o700, parents=True)
+        shutil.copy2(APP / 'scripts/zerotier_worker.py', work / 'worker.py')
+        state = {'id': job_id, 'status': 'running', 'message': 'Закрепляем ZeroTier за исходным IP…', 'updated_at': time.time()}
+        path = folder / 'zerotier-setup.json'
+        temp = path.with_suffix('.tmp')
+        temp.write_text(json.dumps(state), encoding='utf-8')
+        temp.replace(path)
+        return _launch_worker(work, job_id, cfg['network_id'], 'bind', state, temp, path)
+
+
+def _launch_worker(work, job_id, network_id, mode, state, temp, path):
+    try:
+        subprocess.run(['systemd-run', '--quiet', '--collect', '--unit=' + UNIT,
+            '--property=Type=exec', '--property=UMask=0077', '--property=RuntimeMaxSec=900',
+            '/usr/bin/python3', str(work / 'worker.py'), str(ROOT), job_id, network_id, mode],
+            capture_output=True, text=True, check=True, timeout=15)
+    except (OSError, subprocess.SubprocessError) as exc:
+        state.update(status='failed', message='Не удалось запустить настройку ZeroTier', updated_at=time.time())
+        temp.write_text(json.dumps(state), encoding='utf-8')
+        temp.replace(path)
+        raise ValueError(state['message']) from exc
+    return state

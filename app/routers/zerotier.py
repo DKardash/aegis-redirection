@@ -36,3 +36,23 @@ def connect():
         raise HTTPException(409, str(exc)) from exc
     audit('zerotier_connect', 'setup_id=' + job['id'])
     return job
+
+
+@router.post('/retry', status_code=202)
+def retry():
+    try:
+        job = zerotier.start_connect()
+    except ValueError as exc:
+        raise HTTPException(409, str(exc)) from exc
+    audit('zerotier_retry', 'setup_id=' + job['id'])
+    return job
+
+
+@router.post('/apply-original-ip', status_code=202)
+def apply_original_ip():
+    try:
+        job = zerotier.start_apply_original_ip()
+    except ValueError as exc:
+        raise HTTPException(409, str(exc)) from exc
+    audit('zerotier_original_ip', 'setup_id=' + job['id'])
+    return job

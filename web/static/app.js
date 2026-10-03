@@ -178,19 +178,21 @@ function switchView(name) {
 }
 
 /* ===== ZeroTier remote access ===== */
-let zeroTierBusy = false, zeroTierTimer = null;
+let zeroTierBusy = false, zeroTierTimer = null, zeroTierNetworkStatus = '';
 async function loadZeroTierStatus() {
   if (!token) return;
   try {
     const data = await api('/api/zerotier/status');
+    zeroTierNetworkStatus = data.network_status || '';
     $('zt-network-id').value = data.network_id || '';
     $('zt-cidr').value = data.cidr || '10.241.0.0/16';
     const active = data.network_status === 'OK';
     const badge = $('zt-badge');
     const labels = { OK: 'Подключено', ACCESS_DENIED: 'Ожидает подтверждения', REQUESTING_CONFIGURATION: 'Получение адреса', NOT_JOINED: 'Не подключено' };
     badge.textContent = zeroTierBusy ? 'Подключаем…' : labels[data.network_status] || data.network_status || 'Не подключено';
-    badge.className = 'chip ' + (active ? 'chip-success' : zeroTierBusy || data.network_status === 'ACCESS_DENIED' ? 'chip-warning' : 'chip-muted');
+    badge.className = 'chip ' + (active ? 'chip-success' : zeroTierBusy || ['ACCESS_DENIED', 'REQUESTING_CONFIGURATION'].includes(data.network_status) ? 'chip-warning' : 'chip-muted');
     $('zt-service').textContent = data.service === 'active' ? 'Работает' : data.installed ? (data.service || 'Остановлена') : 'Не установлена';
+    $('zt-uplink').textContent = data.uplink_ip ? data.uplink_ip + ' · ' + data.uplink_interface : 'Не определён';
     $('zt-node-id').textContent = data.node_id || '—';
     const address = (data.assigned_ips || []).find(value => /^\d{1,3}(?:\.\d{1,3}){3}\//.test(value));
     const ip = address ? address.split('/')[0] : '';
@@ -200,11 +202,13 @@ async function loadZeroTierStatus() {
     else link.classList.add('hidden');
     const job = data.job;
     zeroTierBusy = job?.status === 'running';
-    const joined = ['OK', 'ACCESS_DENIED', 'REQUESTING_CONFIGURATION'].includes(data.network_status);
-    const message = job?.status === 'failed' ? job.message : data.network_status === 'ACCESS_DENIED' ? 'Откройте ZeroTier Central и подтвердите это устройство по его Node ID.' : active && !ip ? 'В ZeroTier Central задайте пул адресов для указанной подсети.' : job?.status === 'complete' && !active ? job.message : '';
+    const pending = ['ACCESS_DENIED', 'REQUESTING_CONFIGURATION'].includes(data.network_status);
+    const message = job?.status === 'failed' ? job.message : data.network_status === 'ACCESS_DENIED' ? 'Устройство не авторизовано. Сверьте Node ID с ZeroTier Central; если его там нет, нажмите «Переотправить запрос».' : active && !ip ? 'В ZeroTier Central задайте пул адресов для указанной подсети.' : job?.status === 'complete' && !active ? job.message : '';
     $('zt-message').textContent = message;
     $('zt-message').classList.toggle('hidden', !message);
-    $('btn-zt-connect').disabled = zeroTierBusy || joined || !data.network_id;
+    $('btn-zt-connect').textContent = active ? 'Подключено' : pending ? 'Переотправить запрос' : data.installed ? 'Подключить / повторить' : 'Установить и подключить';
+    $('btn-zt-connect').disabled = zeroTierBusy || active || !data.network_id;
+    $('btn-zt-uplink').disabled = zeroTierBusy || !data.installed || !data.uplink_ip;
     if (zeroTierBusy || !$('view-zerotier').classList.contains('hidden')) {
       clearTimeout(zeroTierTimer); zeroTierTimer = setTimeout(loadZeroTierStatus, 5000);
     }
@@ -225,9 +229,21 @@ async function connectZeroTier() {
   try {
     await api('/api/zerotier/config', 'POST', { network_id: $('zt-network-id').value, cidr: $('zt-cidr').value });
     zeroTierBusy = true; $('btn-zt-connect').disabled = true;
-    $('zt-message').textContent = 'Подключаем ZeroTier. Панель останется доступной.';
+    const retry = ['ACCESS_DENIED', 'REQUESTING_CONFIGURATION'].includes(zeroTierNetworkStatus);
+    if (retry && !confirm('Переотправить запрос? ZeroTier кратко отключит и снова подключит эту сеть; Node ID не изменится.')) { zeroTierBusy = false; await loadZeroTierStatus(); return; }
+    $('zt-message').textContent = retry ? 'Повторно отправляем запрос по исходному IP. Node ID сохранится.' : 'Подключаем ZeroTier по исходному IP. Панель останется доступной.';
     $('zt-message').classList.remove('hidden');
-    await api('/api/zerotier/connect', 'POST');
+    await api(retry ? '/api/zerotier/retry' : '/api/zerotier/connect', 'POST');
+    clearTimeout(zeroTierTimer); zeroTierTimer = setTimeout(loadZeroTierStatus, 1500);
+  } catch (e) { zeroTierBusy = false; toast('ZeroTier: ' + e.message, true); await loadZeroTierStatus(); }
+}
+async function applyZeroTierOriginalIP() {
+  if (zeroTierBusy || !confirm('Закрепить ZeroTier за исходным IP ' + $('zt-uplink').textContent + '? Служба ZeroTier кратковременно перезапустится.')) return;
+  try {
+    zeroTierBusy = true; $('btn-zt-uplink').disabled = true;
+    $('zt-message').textContent = 'Перезапускаем ZeroTier с исходным IP…';
+    $('zt-message').classList.remove('hidden');
+    await api('/api/zerotier/apply-original-ip', 'POST');
     clearTimeout(zeroTierTimer); zeroTierTimer = setTimeout(loadZeroTierStatus, 1500);
   } catch (e) { zeroTierBusy = false; toast('ZeroTier: ' + e.message, true); await loadZeroTierStatus(); }
 }
@@ -2560,6 +2576,7 @@ $('btn-update-check').addEventListener('click', checkPanelUpdate);
 $('btn-update-install').addEventListener('click', installPanelUpdate);
 $('btn-zt-save').addEventListener('click', saveZeroTierConfig);
 $('btn-zt-connect').addEventListener('click', connectZeroTier);
+$('btn-zt-uplink').addEventListener('click', applyZeroTierOriginalIP);
 
 (async function init() {
   if (token) {
