@@ -9,7 +9,7 @@ from fastapi import FastAPI
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
-from . import addresslists, alerts, clear_data, failover, mikrotik, monitor, profiles, xray
+from . import addresslists, alerts, clear_data, failover, mikrotik, monitor, profiles, subscriptions, xray
 from .config import settings
 from .db import audit, get_setting, init_db, set_setting
 from .routers import addresslists as addresslists_router, alerts as alerts_router, admin as admin_router, auth, l2tp, mikrotik as mikrotik_router, monitor as monitor_router, profiles as profiles_router, servers, status
@@ -58,6 +58,24 @@ async def _traffic_loop() -> None:
         except Exception as e:  # noqa: BLE001
             logger.error("traffic sample error: %s", e)
         await asyncio.sleep(10)
+
+
+async def _subscriptions_loop() -> None:
+    while True:
+        try:
+            due = await asyncio.to_thread(subscriptions.due_ids)
+            for subscription_id in due:
+                try:
+                    result = await asyncio.to_thread(subscriptions.sync, subscription_id)
+                    logger.info(
+                        "subscription %s synced: added=%s skipped=%s",
+                        subscription_id, result["added_count"], result["skipped_count"],
+                    )
+                except Exception as e:  # noqa: BLE001
+                    logger.warning("subscription %s sync failed: %s", subscription_id, e)
+        except Exception as e:  # noqa: BLE001
+            logger.error("subscription scheduler error: %s", e)
+        await asyncio.sleep(60)
 
 
 def _scheduled_tick() -> None:
@@ -109,8 +127,10 @@ async def lifespan(app: FastAPI):
     app.state.traffic_task = tr_task
     sch_task = asyncio.create_task(_schedule_loop())
     app.state.schedule_task = sch_task
+    sub_task = asyncio.create_task(_subscriptions_loop())
+    app.state.subscriptions_task = sub_task
     yield
-    for name in ("failover_task", "watchdog_task", "traffic_task", "schedule_task"):
+    for name in ("failover_task", "watchdog_task", "traffic_task", "schedule_task", "subscriptions_task"):
         task = getattr(app.state, name, None)
         if task:
             task.cancel()

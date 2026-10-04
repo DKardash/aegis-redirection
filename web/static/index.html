@@ -217,6 +217,14 @@
               <p id="servers-empty" class="muted empty-note hidden">Серверов нет. Добавьте первый.</p>
             </div>
           </div>
+          <div class="card" style="margin-top:16px">
+            <div class="card-header">
+              <div><h2 class="card-title">Подписки</h2><p class="muted">Сохранённые ссылки проверяются каждый час. Новые серверы добавляются автоматически; существующие записи и интерфейсы не меняются.</p></div>
+            </div>
+            <div class="card-body">
+              <div id="server-subscriptions" class="stat-rows"><span class="muted">Сохранённых подписок пока нет.</span></div>
+            </div>
+          </div>
         </section>
 
         <!-- ===== WIREGUARD ===== -->
@@ -1001,6 +1009,7 @@
         <label for="import-url">Ссылка на сервер или подписка (vless://… https://…)</label>
         <textarea id="import-url" rows="4" placeholder="vless://…  или  https://example.com/subscription"></textarea>
       </div>
+      <label class="check-row" style="margin-top:10px"><input type="checkbox" id="remember-subscription"><span>Запомнить подписку и обновлять каждый час</span></label>
       <div class="actions modal-actions">
         <button type="button" id="btn-import-cancel" class="btn btn-ghost">Отмена</button>
         <button id="btn-import-confirm" class="btn btn-primary">Импортировать</button>

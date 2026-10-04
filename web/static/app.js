@@ -1017,6 +1017,36 @@ async function loadServers() {
   // Отрисовываем данные из БД сразу. Сетевая проверка не блокирует таблицу.
   const snapshot = serverCache.slice();
   renderServers(snapshot);
+  await loadServerSubscriptions();
+}
+
+async function loadServerSubscriptions() {
+  const root = $("server-subscriptions");
+  if (!root) return;
+  try {
+    const rows = await api("/api/servers/subscriptions");
+    if (!rows.length) {
+      root.innerHTML = '<span class="muted">Сохранённых подписок пока нет.</span>';
+      return;
+    }
+    root.innerHTML = rows.map((s) => {
+      const checked = s.last_checked ? new Date(s.last_checked).toLocaleString() : "ещё не проверялась";
+      const status = s.last_error
+        ? `<span class="chip chip-error">${escapeHtml(s.last_error)}</span>`
+        : `<span class="chip chip-success">добавлено при проверке: ${s.last_added || 0}</span>`;
+      return `<div class="subscription-row" style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid var(--border)">
+        <div><b>${escapeHtml(s.host)}</b> ${s.enabled ? '<span class="chip chip-success">активна</span>' : '<span class="chip chip-muted">пауза</span>'}
+          <div class="muted" style="margin-top:4px">Последняя проверка: ${escapeHtml(checked)} · ${status}</div></div>
+        <div class="actions">
+          <button class="btn btn-ghost btn-sm" data-sub-act="sync" data-id="${s.id}">Проверить</button>
+          <button class="btn btn-ghost btn-sm" data-sub-act="toggle" data-id="${s.id}" data-enabled="${s.enabled ? "1" : "0"}">${s.enabled ? "Пауза" : "Включить"}</button>
+          <button class="btn btn-ghost btn-sm" data-sub-act="delete" data-id="${s.id}">Удалить подписку</button>
+        </div>
+      </div>`;
+    }).join("");
+  } catch (e) {
+    root.innerHTML = '<span class="muted">Не удалось загрузить список подписок.</span>';
+  }
 }
 
 /* ===== Bulk check ===== */
@@ -2133,21 +2163,51 @@ $("btn-import-confirm").addEventListener("click", async () => {
   if (!raw) return;
   try {
     if (/^https?:\/\//i.test(raw)) {
+      const rememberSubscription = $("remember-subscription").checked;
       const r = await api("/api/servers/import-subscription", "POST", {
         url: raw,
         skip_existing: true,
+        remember_subscription: rememberSubscription,
       });
       const errNote = r.created_count ? "" : " — новых нет";
-      toast(`Импортировано: ${r.created_count}, пропущено: ${r.skipped_count}${errNote}`);
+      toast(`Импортировано: ${r.created_count}, пропущено: ${r.skipped_count}${errNote}${r.subscription_id ? ". Подписка сохранена" : ""}`);
     } else {
+      if ($("remember-subscription").checked) throw new Error("Для сохранения нужна ссылка http/https на подписку");
       await api("/api/servers/import", "POST", { url: raw });
       toast("Импортировано");
     }
     $("import-modal").classList.add("hidden");
     $("import-url").value = "";
+    $("remember-subscription").checked = false;
     await loadServers();
   } catch (e) {
     toast("import: " + e.message, true);
+  }
+});
+
+$("server-subscriptions").addEventListener("click", async (e) => {
+  const btn = e.target.closest("button[data-sub-act]");
+  if (!btn) return;
+  const id = btn.dataset.id;
+  try {
+    if (btn.dataset.subAct === "sync") {
+      const r = await api(`/api/servers/subscriptions/${id}/sync`, "POST", {});
+      toast(`Подписка проверена: добавлено ${r.added_count}, без изменений ${r.skipped_count}`);
+      await loadServers();
+    } else if (btn.dataset.subAct === "toggle") {
+      const enabled = btn.dataset.enabled !== "1";
+      await api(`/api/servers/subscriptions/${id}`, "PUT", { enabled });
+      toast(enabled ? "Автообновление включено" : "Подписка поставлена на паузу");
+      await loadServerSubscriptions();
+    } else if (btn.dataset.subAct === "delete") {
+      if (!await showConfirm({ title: "Удалить подписку", message: "Удалить сохранённую ссылку? Уже импортированные серверы останутся в каталоге." })) return;
+      await api(`/api/servers/subscriptions/${id}`, "DELETE");
+      toast("Подписка удалена; импортированные серверы оставлены");
+      await loadServerSubscriptions();
+    }
+  } catch (e2) {
+    toast("Подписка: " + e2.message, true);
+    await loadServerSubscriptions();
   }
 });
 

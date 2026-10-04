@@ -1,9 +1,10 @@
 import asyncio
+from urllib.parse import urlsplit
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from pydantic import BaseModel
 
-from .. import crud, healthcheck, profiles, protocols, xray
+from .. import crud, healthcheck, profiles, protocols, subscriptions, xray
 from ..config import settings
 from ..db import audit
 from ..schemas import (
@@ -127,6 +128,7 @@ async def import_server(body: ImportRequest, background: BackgroundTasks):
 class ImportSubscriptionRequest(BaseModel):
     url: str
     skip_existing: bool = True
+    remember_subscription: bool = False
 
 
 @router.post("/import-subscription", response_model=dict)
@@ -154,9 +156,14 @@ async def import_subscription(body: ImportSubscriptionRequest, background: Backg
         created.append(s["name"])
         to_check.append(s)
     background.add_task(check_imported, to_check)
+    subscription_id = None
+    if body.remember_subscription:
+        subscription_id = subscriptions.remember(url)
+        subscriptions.mark_imported(subscription_id, len(created))
+    host = urlsplit(url).hostname or "subscription"
     audit(
         "subscription_import",
-        f"url={url} created={len(created)} skipped={len(skipped)} total={len(parsed)}",
+        f"host={host} created={len(created)} skipped={len(skipped)} total={len(parsed)} saved={bool(subscription_id)}",
     )
     return {
         "total": len(parsed),
@@ -164,7 +171,45 @@ async def import_subscription(body: ImportSubscriptionRequest, background: Backg
         "skipped": skipped,
         "created_count": len(created),
         "skipped_count": len(skipped),
+        "subscription_id": subscription_id,
     }
+
+
+class SubscriptionEnabledRequest(BaseModel):
+    enabled: bool
+
+
+@router.get("/subscriptions", response_model=list[dict])
+async def list_server_subscriptions():
+    # Raw URLs are intentionally not returned: subscription links often contain tokens.
+    return subscriptions.list_subscriptions()
+
+
+@router.post("/subscriptions/{subscription_id:int}/sync", response_model=dict)
+async def sync_server_subscription(subscription_id: int):
+    try:
+        result = await asyncio.to_thread(subscriptions.sync, subscription_id, force=True)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except RuntimeError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+    audit("subscription_sync", f"id={subscription_id} added={result['added_count']}")
+    return result
+
+
+@router.put("/subscriptions/{subscription_id:int}", response_model=dict)
+async def set_server_subscription(subscription_id: int, body: SubscriptionEnabledRequest):
+    if not subscriptions.set_enabled(subscription_id, body.enabled):
+        raise HTTPException(status_code=404, detail="subscription not found")
+    return {"ok": True, "enabled": body.enabled}
+
+
+@router.delete("/subscriptions/{subscription_id:int}", response_model=MessageResponse)
+async def delete_server_subscription(subscription_id: int):
+    if not subscriptions.delete(subscription_id):
+        raise HTTPException(status_code=404, detail="subscription not found")
+    # Existing servers are deliberately left untouched.
+    return MessageResponse(message="subscription removed; imported servers kept")
 
 
 @router.get("/{server_id:int}", response_model=ServerOut)

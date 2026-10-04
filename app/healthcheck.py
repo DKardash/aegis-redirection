@@ -17,6 +17,15 @@ _SLOTS = threading.BoundedSemaphore(3)
 _START_LOCK = threading.Lock()
 
 
+def _http_probe_succeeded(returncode: int, status_code: str) -> bool:
+    """A complete HTTP response proves proxy egress even if the target rejects us."""
+    try:
+        status = int(status_code)
+    except (TypeError, ValueError):
+        return False
+    return returncode == 0 and 100 <= status <= 599
+
+
 def tcp_check(server: Dict) -> Tuple[bool, Optional[float], str]:
     try:
         start = time.monotonic()
@@ -68,7 +77,7 @@ def _probe(server: Dict) -> Tuple[bool, Optional[float], str]:
                     "-o", "/dev/null", "-w", "%{http_code} %{time_total}", target,
                 ], capture_output=True, text=True, timeout=timeout + 2)
                 parts = result.stdout.strip().split()
-                if result.returncode == 0 and len(parts) == 2 and parts[0] in ("200", "204", "301", "302", "307", "308"):
+                if len(parts) == 2 and _http_probe_succeeded(result.returncode, parts[0]):
                     return True, round(float(parts[1]) * 1000, 1), ""
                 errors.append((result.stderr or f"HTTP {parts[0] if parts else '?'}").strip()[-180:])
                 if attempt == 0:

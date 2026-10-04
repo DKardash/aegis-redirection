@@ -76,6 +76,18 @@ def init_db() -> None:
                 value TEXT NOT NULL
             );
 
+            CREATE TABLE IF NOT EXISTS server_subscriptions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                url TEXT NOT NULL UNIQUE,
+                host TEXT NOT NULL,
+                enabled INTEGER NOT NULL DEFAULT 1,
+                interval_seconds INTEGER NOT NULL DEFAULT 3600,
+                last_checked TEXT,
+                last_added INTEGER NOT NULL DEFAULT 0,
+                last_error TEXT NOT NULL DEFAULT '',
+                created_at TEXT NOT NULL
+            );
+
             CREATE TABLE IF NOT EXISTS sessions (
                 token TEXT PRIMARY KEY,
                 expires_at REAL NOT NULL,
