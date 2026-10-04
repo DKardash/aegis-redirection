@@ -159,6 +159,7 @@ async def import_subscription(body: ImportSubscriptionRequest, background: Backg
     subscription_id = subscriptions.remember(url) if body.remember_subscription else None
     if body.remember_subscription:
         subscriptions.mark_imported(subscription_id, len(created))
+        subscriptions.link_current_servers(subscription_id, parsed)
     host = urlsplit(url).hostname or "subscription"
     audit(
         "subscription_import",
@@ -192,7 +193,10 @@ async def sync_server_subscription(subscription_id: int):
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except RuntimeError as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
-    audit("subscription_sync", f"id={subscription_id} added={result['added_count']}")
+    audit(
+        "subscription_sync",
+        f"id={subscription_id} added={result['added_count']} removed={result['removed_count']} retained={result['retained_count']}",
+    )
     return result
 
 

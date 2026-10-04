@@ -35,6 +35,25 @@ class RoutingRevisionTests(unittest.TestCase):
         state = profiles.choose_route(PROFILE, state, {1: FAIL, 2: OK})
         self.assertEqual(state["active_server_id"], 2)
 
+    def test_inconclusive_http_probe_keeps_current_route_without_advancing_failures(self):
+        previous = {"active_server_id": 1, "failures": {"1": 1, "2": 0}, "successes": {"1": 0, "2": 0}}
+        state = profiles.choose_route(PROFILE, previous, {
+            1: (None, 18, "HTTP timeout; TCP port reachable"),
+            2: OK,
+        })
+        self.assertEqual(state["active_server_id"], 1)
+        self.assertEqual(state["failures"]["1"], 1)
+        self.assertEqual(state["health"], "degraded")
+        self.assertIn("TCP port reachable", state["error"])
+
+    def test_inconclusive_primary_probe_does_not_fail_back_from_backup(self):
+        previous = {"active_server_id": 2, "failures": {"1": 0, "2": 0}, "successes": {"1": 2, "2": 1}}
+        state = profiles.choose_route(PROFILE, previous, {
+            1: (None, 18, "HTTP timeout; TCP port reachable"),
+            2: OK,
+        })
+        self.assertEqual(state["active_server_id"], 2)
+
     def test_interfaces_are_independent(self):
         a = profiles.choose_route(PROFILE, {"failures": {"1": 1}}, {1: FAIL, 2: OK, 3: OK})
         b = profiles.choose_route({**PROFILE, "id": 2, "server_id": 3}, {}, {1: FAIL, 2: OK, 3: OK})

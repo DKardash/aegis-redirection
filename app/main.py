@@ -68,8 +68,9 @@ async def _subscriptions_loop() -> None:
                 try:
                     result = await asyncio.to_thread(subscriptions.sync, subscription_id)
                     logger.info(
-                        "subscription %s synced: added=%s skipped=%s",
-                        subscription_id, result["added_count"], result["skipped_count"],
+                        "subscription %s synced: added=%s removed=%s retained=%s skipped=%s",
+                        subscription_id, result["added_count"], result["removed_count"],
+                        result["retained_count"], result["skipped_count"],
                     )
                 except Exception as e:  # noqa: BLE001
                     logger.warning("subscription %s sync failed: %s", subscription_id, e)

@@ -84,8 +84,16 @@ def init_db() -> None:
                 interval_seconds INTEGER NOT NULL DEFAULT 3600,
                 last_checked TEXT,
                 last_added INTEGER NOT NULL DEFAULT 0,
+                last_removed INTEGER NOT NULL DEFAULT 0,
+                last_retained INTEGER NOT NULL DEFAULT 0,
                 last_error TEXT NOT NULL DEFAULT '',
                 created_at TEXT NOT NULL
+            );
+
+            CREATE TABLE IF NOT EXISTS subscription_servers (
+                subscription_id INTEGER NOT NULL REFERENCES server_subscriptions(id) ON DELETE CASCADE,
+                server_id INTEGER NOT NULL REFERENCES servers(id) ON DELETE CASCADE,
+                PRIMARY KEY(subscription_id, server_id)
             );
 
             CREATE TABLE IF NOT EXISTS sessions (
@@ -131,6 +139,14 @@ def init_db() -> None:
             "host": "ALTER TABLE servers ADD COLUMN host TEXT NOT NULL DEFAULT ''",
         }.items():
             if col not in columns:
+                conn.execute(ddl)
+
+        subscription_columns = [r[1] for r in conn.execute("PRAGMA table_info(server_subscriptions)").fetchall()]
+        for col, ddl in {
+            "last_removed": "ALTER TABLE server_subscriptions ADD COLUMN last_removed INTEGER NOT NULL DEFAULT 0",
+            "last_retained": "ALTER TABLE server_subscriptions ADD COLUMN last_retained INTEGER NOT NULL DEFAULT 0",
+        }.items():
+            if col not in subscription_columns:
                 conn.execute(ddl)
 
 

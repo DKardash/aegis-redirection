@@ -24,6 +24,17 @@ class TestHealthProbeResponse(unittest.TestCase):
             ["https://www.gstatic.com/generate_204", "https://www.cloudflare.com/cdn-cgi/trace"],
         )
 
+    def test_route_check_marks_http_timeout_inconclusive_when_vpn_tcp_port_is_open(self):
+        from unittest.mock import patch
+        from app import healthcheck
+
+        with patch.object(healthcheck, "check_server", return_value=(False, None, "curl timeout")), \
+             patch.object(healthcheck, "tcp_check", return_value=(True, 12, "")):
+            result = healthcheck.route_check({"address": "nl.example", "port": 443})
+        self.assertIsNone(result[0])
+        self.assertEqual(result[1], 12)
+        self.assertIn("маршрут сохранён", result[2])
+
 
 if __name__ == "__main__":
     unittest.main()

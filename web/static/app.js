@@ -1033,7 +1033,7 @@ async function loadServerSubscriptions() {
       const checked = s.last_checked ? new Date(s.last_checked).toLocaleString() : "ещё не проверялась";
       const status = s.last_error
         ? `<span class="chip chip-error">${escapeHtml(s.last_error)}</span>`
-        : `<span class="chip chip-success">добавлено при проверке: ${s.last_added || 0}</span>`;
+        : `<span class="chip chip-success">+${s.last_added || 0} добавлено · −${s.last_removed || 0} удалено · ${s.last_retained || 0} оставлено в активных интерфейсах</span>`;
       return `<div class="subscription-row" style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid var(--border)">
         <div><b>${escapeHtml(s.host)}</b> ${s.enabled ? '<span class="chip chip-success">активна</span>' : '<span class="chip chip-muted">пауза</span>'}
           <div class="muted" style="margin-top:4px">Последняя проверка: ${escapeHtml(checked)} · ${status}</div></div>
@@ -2192,7 +2192,7 @@ $("server-subscriptions").addEventListener("click", async (e) => {
   try {
     if (btn.dataset.subAct === "sync") {
       const r = await api(`/api/servers/subscriptions/${id}/sync`, "POST", {});
-      toast(`Подписка проверена: добавлено ${r.added_count}, без изменений ${r.skipped_count}`);
+      toast(`Подписка: +${r.added_count} добавлено, −${r.removed_count} удалено, ${r.retained_count} оставлено в интерфейсах`);
       await loadServers();
     } else if (btn.dataset.subAct === "toggle") {
       const enabled = btn.dataset.enabled !== "1";
@@ -2344,7 +2344,7 @@ async function loadProfiles(users = null) {
         <td class="mono"><b>${escapeHtml(p.local_ip)}/${p.prefix}</b><br><span class="muted">${escapeHtml(p.name)} · ${escapeHtml(p.interface)}</span></td>
         <td><span class="mono">${escapeHtml(p.username)}</span></td>
         <td><b>Основной:</b> ${escapeHtml(p.server_name || "не найден")}<br><span class="muted">Резерв: ${escapeHtml(p.backup_server_name || "не выбран")}</span><br><span class="chip ${p.on_backup ? "chip-warning" : "chip-muted"}">Сейчас: ${escapeHtml(p.active_server_name || "заблокирован")}</span></td>
-        <td>${!p.enabled ? '<span class="chip chip-muted">выключен</span>' : p.health === "unknown" ? '<span class="chip chip-muted">ожидает проверки</span>' : chip(p.service === "active" && p.health === "ok", "работает", "нет связи")}<br><span class="muted">${p.checked_at ? escapeHtml(new Date(p.checked_at).toLocaleTimeString()) : "—"}</span></td>
+        <td>${!p.enabled ? '<span class="chip chip-muted">выключен</span>' : p.health === "unknown" ? '<span class="chip chip-muted">ожидает проверки</span>' : p.health === "degraded" ? '<span class="chip chip-warning">проверка выхода недоступна; маршрут сохранён</span>' : chip(p.service === "active" && p.health === "ok", "работает", "нет связи")}<br><span class="muted">${p.checked_at ? escapeHtml(new Date(p.checked_at).toLocaleTimeString()) : "—"}</span></td>
         <td class="ta-r">
           <button class="icon-btn-sm" data-profile-edit="${p.id}" title="Изменить">${ICONS.edit || "✎"}</button>
           <button class="icon-btn-sm ic-del" data-profile-del="${p.id}" title="Удалить">${ICONS.trash}</button>

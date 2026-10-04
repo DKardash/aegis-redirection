@@ -63,6 +63,53 @@ class SubscriptionStorageTests(unittest.TestCase):
         self.assertEqual(refreshed["latest_latency_ms"], 680)
         self.assertEqual(refreshed["best_latency_ms"], 24)
 
+    def _server(self, name, address):
+        return parse_vless_url(
+            f"vless://uuid@{address}:443?security=none&type=tcp#{name}"
+        )
+
+    def test_sync_removes_missing_owned_servers_after_valid_feed(self):
+        first, second = self._server("First", "first.example"), self._server("Second", "second.example")
+        subscription_id = subscriptions.remember("https://feed.example/sub")
+        a = crud.create_server(first.model_dump())
+        b = crud.create_server(second.model_dump())
+        subscriptions.link_current_servers(subscription_id, [first, second])
+
+        with patch("app.subscriptions.protocols.parse_subscription_url", return_value=[second]), \
+             patch("app.profiles._stored_profiles", return_value=[]):
+            result = subscriptions.sync(subscription_id)
+
+        self.assertEqual(result["removed_count"], 1)
+        self.assertEqual(result["retained_count"], 0)
+        self.assertIsNone(crud.get_server(a["id"]))
+        self.assertIsNotNone(crud.get_server(b["id"]))
+
+    def test_sync_retains_removed_server_if_an_interface_references_it(self):
+        first, second = self._server("First", "first.example"), self._server("Second", "second.example")
+        subscription_id = subscriptions.remember("https://feed.example/sub")
+        a = crud.create_server(first.model_dump())
+        crud.create_server(second.model_dump())
+        subscriptions.link_current_servers(subscription_id, [first, second])
+
+        with patch("app.subscriptions.protocols.parse_subscription_url", return_value=[second]), \
+             patch("app.profiles._stored_profiles", return_value=[{"server_id": a["id"], "backup_server_id": None}]):
+            result = subscriptions.sync(subscription_id)
+
+        self.assertEqual(result["removed_count"], 0)
+        self.assertEqual(result["retained_count"], 1)
+        self.assertIsNotNone(crud.get_server(a["id"]))
+
+    def test_failed_or_empty_feed_does_not_remove_servers(self):
+        first = self._server("First", "first.example")
+        subscription_id = subscriptions.remember("https://feed.example/sub")
+        server = crud.create_server(first.model_dump())
+        subscriptions.link_current_servers(subscription_id, [first])
+
+        with patch("app.subscriptions.protocols.parse_subscription_url", return_value=[]):
+            with self.assertRaises(RuntimeError):
+                subscriptions.sync(subscription_id)
+        self.assertIsNotNone(crud.get_server(server["id"]))
+
 
 if __name__ == "__main__":
     unittest.main()

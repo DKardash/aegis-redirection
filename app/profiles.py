@@ -46,7 +46,7 @@ def active_id(profile: dict, state: dict) -> int:
 
 
 def choose_route(profile: dict, previous: dict, checks: dict) -> dict:
-    """Two failed rounds to switch; two successful rounds to return."""
+    """Two failed rounds to switch; two successful rounds to return; unknown is neutral."""
     primary = int(profile["server_id"])
     backup = int(profile.get("backup_server_id") or 0)
     active = int(previous.get("active_server_id", primary) or 0)
@@ -56,22 +56,30 @@ def choose_route(profile: dict, previous: dict, checks: dict) -> dict:
     for server_id in filter(None, (primary, backup)):
         key = str(server_id)
         ok = checks.get(server_id, (False, None, "сервер недоступен"))[0]
-        failures[key] = 0 if ok else min(2, previous.get("failures", {}).get(key, 0) + 1)
-        successes[key] = min(2, previous.get("successes", {}).get(key, 0) + 1) if ok else 0
+        if ok is None:
+            failures[key] = previous.get("failures", {}).get(key, 0)
+            successes[key] = previous.get("successes", {}).get(key, 0)
+        else:
+            failures[key] = 0 if ok else min(2, previous.get("failures", {}).get(key, 0) + 1)
+            successes[key] = min(2, previous.get("successes", {}).get(key, 0) + 1) if ok else 0
     main_ok = bool(successes.get(str(primary)))
     backup_ok = bool(backup and successes.get(str(backup)))
     if active == 0:
-        active = primary if main_ok else backup if backup_ok else 0
-    elif active == backup and successes.get(str(primary), 0) >= 2:
+        active = primary if main_ok or checks.get(primary, (False,))[0] is None else backup if backup_ok or (backup and checks.get(backup, (False,))[0] is None) else 0
+    elif active == backup and checks.get(primary, (False,))[0] is True and successes.get(str(primary), 0) >= 2:
         active = primary
+    elif checks.get(active, (False,))[0] is None:
+        pass
     elif failures.get(str(active), 0) >= 2:
         active = (backup if backup_ok else 0) if active == primary else (primary if main_ok else 0)
+    active_result = checks.get(active, (False, None, "Нет подтверждённого рабочего выхода")) if active else (False, None, "Нет подтверждённого рабочего выхода")
+    health = "degraded" if active and active_result[0] is None else "ok" if active and active_result[0] else "fail"
     return {
         "active_server_id": active,
         "failures": failures, "successes": successes,
-        "health": "ok" if active and checks.get(active, (False,))[0] else "fail",
+        "health": health,
         "checked_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
-        "error": "" if active and checks.get(active, (False,))[0] else "Нет подтверждённого рабочего выхода",
+        "error": "" if health == "ok" else active_result[2] or "Нет подтверждённого рабочего выхода",
     }
 
 
@@ -91,7 +99,7 @@ def _failover_tick() -> str:
     servers = {sid: crud.get_server(sid) for sid in ids}
     def probe(sid):
         server = servers[sid]
-        return healthcheck.check_server(server) if server and server.get("enabled") else (False, None, "сервер отключён")
+        return healthcheck.route_check(server) if server and server.get("enabled") else (False, None, "сервер отключён")
     with ThreadPoolExecutor(max_workers=3) as pool:
         checks = dict(zip(sorted(ids), pool.map(probe, sorted(ids))))
     with _LOCK:
@@ -232,6 +240,7 @@ def list_profiles() -> list[dict]:
         row["active_server_name"] = current.get("name", "") if current else ""
         row["on_backup"] = bool(current and current["id"] == row.get("backup_server_id"))
         row["health"] = state.get(str(row["id"]), {}).get("health", "unknown")
+        row["health_error"] = state.get(str(row["id"]), {}).get("error", "")
         row["checked_at"] = state.get(str(row["id"]), {}).get("checked_at")
         unit = "xl2tpd" if row.get("primary") else f"xray-l2tp-profile@{row.get('id')}"
         code, status = _run(["systemctl", "is-active", unit], timeout=8)

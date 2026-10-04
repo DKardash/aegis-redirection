@@ -119,3 +119,20 @@ def check_server(server: Dict, persist: bool = True) -> Tuple[bool, Optional[flo
     if persist:
         set_health(server["id"], *result)
     return result
+
+
+def route_check(server: Dict) -> Tuple[Optional[bool], Optional[float], str]:
+    """Keep failover from treating blocked HTTP probe targets as a dead VPN endpoint.
+
+    A successful HTTP probe is a confirmed pass. If both HTTPS targets time out but
+    the configured VPN server port is still reachable, report an inconclusive result;
+    failover must retain the current route instead of blackholing it. A failed TCP
+    connection remains a real failure and can trigger the existing hysteresis.
+    """
+    ok, latency, error = check_server(server)
+    if ok:
+        return True, latency, ""
+    tcp_ok, tcp_latency, tcp_error = tcp_check(server)
+    if tcp_ok:
+        return None, tcp_latency, "HTTP-проверки истекли по таймауту, но TCP-порт VPN-сервера доступен; маршрут сохранён"
+    return False, None, f"{error}; {tcp_error}"
