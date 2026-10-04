@@ -8,6 +8,18 @@ SUPPORTED_SECURITY = ("reality", "tls", "none")
 SUBSCRIPTION_UA = "curl/8.5.0"
 
 
+def server_identity(server: dict) -> tuple:
+    """Stable connection identity; names and presentation settings do not define a server."""
+    return tuple(
+        server.get(key, "")
+        for key in (
+            "protocol", "address", "port", "uuid", "flow", "network", "security",
+            "sni", "reality_public_key", "reality_short_id", "fingerprint", "path",
+            "mode", "service_name", "alpn", "host",
+        )
+    )
+
+
 def _split_host_port(value: str) -> Tuple[str, int]:
     value = value.strip()
     if value.startswith("["):

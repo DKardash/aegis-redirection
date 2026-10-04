@@ -21,6 +21,12 @@ def _with_best_latency(server: Optional[dict]) -> Optional[dict]:
     if server is None:
         return None
     server["best_latency_ms"] = best_latency(server["id"])
+    with db() as conn:
+        row = conn.execute(
+            "SELECT latency_ms FROM health_checks WHERE server_id=? ORDER BY id DESC LIMIT 1",
+            (server["id"],),
+        ).fetchone()
+    server["latest_latency_ms"] = row["latency_ms"] if row else None
     return server
 
 

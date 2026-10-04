@@ -9,6 +9,7 @@ from app.protocols import (
     parse_share_url,
     parse_trojan_url,
     parse_vless_url,
+    server_identity,
 )
 from app.xray import build_config, build_multi_config
 
@@ -83,6 +84,14 @@ class TestParseUrls(unittest.TestCase):
     def test_reject_invalid(self):
         with self.assertRaises(ValueError):
             parse_share_url("ss://notsupported")
+
+    def test_subscription_identity_keeps_distinct_protocols_on_same_endpoint(self):
+        vless = parse_share_url(VLESS_URL).model_dump()
+        hysteria = parse_hysteria2_url(HYSTERIA2_URL).model_dump()
+        hysteria.update(address=vless["address"], port=vless["port"])
+        self.assertNotEqual(server_identity(vless), server_identity(hysteria))
+        renamed = dict(vless, name="Another display name")
+        self.assertEqual(server_identity(vless), server_identity(renamed))
 
 
 class TestBuildConfig(unittest.TestCase):

@@ -143,11 +143,11 @@ async def import_subscription(body: ImportSubscriptionRequest, background: Backg
     if not parsed:
         raise HTTPException(status_code=400, detail="subscription contains no parseable servers")
 
-    existing = {f"{s['address']}:{s['port']}" for s in crud.list_servers()}
+    existing = {protocols.server_identity(s) for s in crud.list_servers()}
     created, skipped = [], []
     to_check = []
     for p in parsed:
-        key = f"{p.address}:{p.port}"
+        key = protocols.server_identity(p.model_dump())
         if body.skip_existing and key in existing:
             skipped.append(p.name)
             continue
@@ -156,9 +156,8 @@ async def import_subscription(body: ImportSubscriptionRequest, background: Backg
         created.append(s["name"])
         to_check.append(s)
     background.add_task(check_imported, to_check)
-    subscription_id = None
+    subscription_id = subscriptions.remember(url) if body.remember_subscription else None
     if body.remember_subscription:
-        subscription_id = subscriptions.remember(url)
         subscriptions.mark_imported(subscription_id, len(created))
     host = urlsplit(url).hostname or "subscription"
     audit(

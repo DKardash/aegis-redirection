@@ -81,6 +81,7 @@ class ServerOut(ServerBase):
     last_health: Optional[str] = None
     last_health_at: Optional[str] = None
     best_latency_ms: Optional[float] = None
+    latest_latency_ms: Optional[float] = None
 
 
 class LoginRequest(BaseModel):

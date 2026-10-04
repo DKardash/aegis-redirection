@@ -8,6 +8,7 @@ import threading
 import time
 from pathlib import Path
 from typing import Dict, Optional, Tuple
+from urllib.parse import urlsplit
 
 from .config import settings
 from .crud import set_health
@@ -24,6 +25,23 @@ def _http_probe_succeeded(returncode: int, status_code: str) -> bool:
     except (TypeError, ValueError):
         return False
     return returncode == 0 and 100 <= status <= 599
+
+
+def _probe_targets(server: Dict) -> list[str]:
+    """Prefer the server's configured camouflage host, then use independent fallbacks."""
+    targets = []
+    sni = (server.get("sni") or "").strip()
+    if sni:
+        try:
+            parsed = urlsplit("https://" + sni)
+            if parsed.hostname and parsed.path in ("", "/") and not parsed.username:
+                targets.append(f"https://{parsed.hostname}/")
+        except ValueError:
+            pass
+    for target in ("https://www.gstatic.com/generate_204", "https://www.cloudflare.com/cdn-cgi/trace"):
+        if target not in targets:
+            targets.append(target)
+    return targets[:2]
 
 
 def tcp_check(server: Dict) -> Tuple[bool, Optional[float], str]:
@@ -68,7 +86,7 @@ def _probe(server: Dict) -> Tuple[bool, Optional[float], str]:
                             return False, None, "Тестовый прокси не открыл порт за 5 секунд"
                         time.sleep(.05)
             timeout = max(5, min(float(settings.healthcheck_timeout), 20))
-            targets = ["https://www.gstatic.com/generate_204", "https://www.cloudflare.com/cdn-cgi/trace"]
+            targets = _probe_targets(server)
             errors = []
             for attempt, target in enumerate(targets):
                 result = subprocess.run([
@@ -82,7 +100,7 @@ def _probe(server: Dict) -> Tuple[bool, Optional[float], str]:
                 errors.append((result.stderr or f"HTTP {parts[0] if parts else '?'}").strip()[-180:])
                 if attempt == 0:
                     time.sleep(.4)
-            return False, None, "Не прошли 2 попытки через этот сервер: " + "; ".join(errors)
+            return False, None, "Проверки через этот сервер не прошли: " + "; ".join(errors)
     except (OSError, ValueError, subprocess.SubprocessError) as exc:
         return False, None, str(exc)[:400]
     finally:

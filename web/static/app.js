@@ -979,7 +979,7 @@ function renderServers(servers, bestId = null) {
     const status = s.last_health
       ? chip(s.last_health === "ok")
       : '<span class="chip chip-muted">—</span>';
-    const lat = s.best_latency_ms != null ? s.best_latency_ms + "ms" : "—";
+    const lat = s.latest_latency_ms != null ? s.latest_latency_ms + "ms" : "—";
     const isBest = s.id === bestId;
     if (isBest) tr.className = "best-row";
     const bestBadge = isBest
@@ -1045,7 +1045,7 @@ async function loadServerSubscriptions() {
       </div>`;
     }).join("");
   } catch (e) {
-    root.innerHTML = '<span class="muted">Не удалось загрузить список подписок.</span>';
+    root.innerHTML = `<span class="stat-sub err">Не удалось загрузить подписки: ${escapeHtml(e.message)}</span>`;
   }
 }
 

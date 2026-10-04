@@ -93,11 +93,11 @@ def sync(subscription_id: int, *, force: bool = False) -> dict:
             parsed = protocols.parse_subscription_url(row["url"])
             if not parsed:
                 raise ValueError("subscription contains no parseable servers")
-            existing = {f"{s['address']}:{s['port']}" for s in crud.list_servers()}
+            existing = {protocols.server_identity(s) for s in crud.list_servers()}
             created = []
             skipped = 0
             for item in parsed:
-                key = f"{item.address}:{item.port}"
+                key = protocols.server_identity(item.model_dump())
                 if key in existing:
                     skipped += 1
                     continue

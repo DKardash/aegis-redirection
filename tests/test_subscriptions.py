@@ -4,8 +4,10 @@ from pathlib import Path
 from unittest.mock import patch
 
 from app import db as database
+from app import crud
 from app.config import settings
 from app import subscriptions
+from app.protocols import parse_vless_url
 
 
 class SubscriptionStorageTests(unittest.TestCase):
@@ -50,6 +52,16 @@ class SubscriptionStorageTests(unittest.TestCase):
         self.assertEqual(subscriptions.due_ids(), [])
         self.assertTrue(subscriptions.delete(subscription_id))
         self.assertEqual(subscriptions.list_subscriptions(), [])
+
+    def test_server_list_exposes_latest_latency_separately_from_historical_best(self):
+        server = crud.create_server(parse_vless_url(
+            "vless://uuid@server.example:443?security=none&type=tcp#Server"
+        ).model_dump())
+        crud.set_health(server["id"], True, 24, "")
+        crud.set_health(server["id"], True, 680, "")
+        refreshed = crud.get_server(server["id"])
+        self.assertEqual(refreshed["latest_latency_ms"], 680)
+        self.assertEqual(refreshed["best_latency_ms"], 24)
 
 
 if __name__ == "__main__":
