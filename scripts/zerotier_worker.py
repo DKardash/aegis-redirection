@@ -69,6 +69,27 @@ def execute(root, job_id, network_id, mode, requested_source):
             temporary.replace(local_conf)
         return source, changed
 
+    def wait_for_local_api(cli):
+        deadline = time.monotonic() + 20
+        last_error = 'ZeroTier local API is not ready'
+        while time.monotonic() < deadline:
+            try:
+                result = subprocess.run([cli, '-j', 'info'], capture_output=True, text=True, timeout=5)
+                if result.returncode == 0:
+                    return json.loads(result.stdout)
+                last_error = (result.stderr or result.stdout or last_error).strip()
+            except (OSError, subprocess.SubprocessError, ValueError) as exc:
+                last_error = str(exc)
+            time.sleep(1)
+        raise RuntimeError('ZeroTier service did not become ready: ' + last_error)
+
+    def leave_network(cli):
+        try:
+            result = subprocess.run([cli, 'leave', network_id], capture_output=True, text=True, timeout=30)
+            return result.returncode, (result.stderr or result.stdout or '').strip()
+        except (OSError, subprocess.SubprocessError) as exc:
+            return 1, str(exc)
+
     try:
         cli_path = shutil.which('zerotier-cli')
         if not cli_path:
@@ -100,17 +121,41 @@ def execute(root, job_id, network_id, mode, requested_source):
         subprocess.run(['systemctl', 'enable', '--now', 'zerotier-one'], check=True, timeout=30)
         if changed:
             subprocess.run(['systemctl', 'restart', 'zerotier-one'], check=True, timeout=30)
+        info = wait_for_local_api(cli_path)
         message = 'ZeroTier закреплён за исходным IP ' + source_ip + '.'
         if mode in ('connect', 'retry'):
+            leave_warning = ''
             if mode == 'retry':
                 state('running', 'Повторно отправляем запрос через ' + source_ip + '…')
-                subprocess.run([cli_path, 'leave', network_id], capture_output=True, text=True, check=True, timeout=30)
-                time.sleep(1)
+                leave_code, leave_message = leave_network(cli_path)
+                if leave_code:
+                    recovery_errors = []
+                    try:
+                        subprocess.run(['systemctl', 'restart', 'zerotier-one'], check=True, timeout=30)
+                    except (OSError, subprocess.SubprocessError) as exc:
+                        recovery_errors.append('перезапуск службы: ' + str(exc))
+                    try:
+                        info = wait_for_local_api(cli_path)
+                    except (OSError, subprocess.SubprocessError, ValueError) as exc:
+                        recovery_errors.append('ожидание службы: ' + str(exc))
+                    leave_code, leave_message = leave_network(cli_path)
+                    if leave_code:
+                        leave_warning = '; '.join(recovery_errors + [
+                            leave_message or 'неизвестная ошибка leave'])
+                if not leave_code:
+                    time.sleep(1)
             result = subprocess.run([cli_path, 'join', network_id], capture_output=True, text=True, check=True, timeout=30)
-            info = json.loads(subprocess.check_output([cli_path, '-j', 'info'], text=True, timeout=15))
-            message += ' Запрос отправлен' + (' повторно' if mode == 'retry' else '') + '. Node ID: ' + info.get('address', 'не определён') + '. Проверьте его в ZeroTier Central.'
-            if 'join OK' not in result.stdout and 'already joined' not in result.stdout.lower():
-                message += ' Ответ: ' + (result.stdout.strip() or result.stderr.strip())
+            info = wait_for_local_api(cli_path)
+            join_output = result.stdout.strip() or result.stderr.strip()
+            if 'already joined' in join_output.lower():
+                message += ' ВМ уже состоит в сети; новый запрос через join не создан.'
+            else:
+                message += ' Запрос отправлен' + (' повторно' if mode == 'retry' else '') + '.'
+            message += ' Node ID: ' + info.get('address', 'не определён') + '. Проверьте его в ZeroTier Central.'
+            if 'join OK' not in join_output and 'already joined' not in join_output.lower():
+                message += ' Ответ: ' + join_output
+            if leave_warning:
+                message += ' Предупреждение: leave не выполнен (' + leave_warning + '), но join отправлен.'
         state('complete', message)
     except Exception as exc:
         log_path = work / 'setup.log'

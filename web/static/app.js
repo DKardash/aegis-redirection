@@ -216,7 +216,8 @@ async function loadZeroTierStatus() {
     zeroTierAppliedSources = appliedSources;
     zeroTierAutoSource = data.uplink_ip || '';
     zeroTierNeedsApply = active && !(appliedSources.length === 1 && appliedSources[0] === desiredSource);
-    const message = job?.status === 'failed' ? [job.message, job.error_detail].filter(Boolean).join('\n') : data.network_status === 'ACCESS_DENIED' ? 'Устройство не авторизовано. Сверьте Node ID с ZeroTier Central; если его там нет, нажмите «Переотправить запрос».' : active && !ip ? 'В ZeroTier Central задайте пул адресов для указанной подсети.' : job?.status === 'complete' && !active ? job.message : '';
+    const statusHint = data.network_status === 'ACCESS_DENIED' ? 'Устройство не авторизовано. Сверьте Node ID с ZeroTier Central; если его там нет, нажмите «Переотправить запрос».' : active && !ip ? 'В ZeroTier Central задайте пул адресов для указанной подсети.' : '';
+    const message = job?.status === 'failed' ? [job.message, job.error_detail].filter(Boolean).join('\n') : [job?.status === 'complete' && !active ? job.message : '', statusHint].filter(Boolean).join('\n');
     $('zt-message').textContent = message;
     $('zt-message').classList.toggle('hidden', !message);
     $('btn-zt-connect').textContent = active ? zeroTierNeedsApply ? 'Применить интерфейс' : 'Подключено' : pending ? 'Переотправить запрос' : data.installed ? 'Подключить / повторить' : 'Установить и подключить';
