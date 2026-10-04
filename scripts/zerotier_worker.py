@@ -10,9 +10,14 @@ import time
 from pathlib import Path
 
 
-def execute(root, job_id, network_id, mode):
-    if not re.fullmatch(r'[a-f0-9]{32}', job_id) or not re.fullmatch(r'[a-f0-9]{16}', network_id) or mode not in ('connect', 'retry', 'bind'):
+def execute(root, job_id, network_id, mode, requested_source):
+    if not re.fullmatch(r'[a-f0-9]{32}', job_id) or not re.fullmatch(r'[a-f0-9]{16}', network_id) or mode not in ('connect', 'retry'):
         raise ValueError('Invalid ZeroTier setup arguments')
+    if requested_source != 'auto':
+        try:
+            requested_source = str(ipaddress.IPv4Address(requested_source))
+        except ipaddress.AddressValueError as exc:
+            raise ValueError('Invalid ZeroTier source IP') from exc
     work = root / 'updates/zerotier-jobs' / job_id
     path = root / 'updates/zerotier-setup.json'
 
@@ -23,17 +28,27 @@ def execute(root, job_id, network_id, mode):
         temp.replace(path)
 
     def pin_original_ip():
-        routes = json.loads(subprocess.check_output(['ip', '-j', 'route', 'get', '1.1.1.1'], text=True, timeout=10))
-        route = routes[0]
-        source, interface = route.get('src', ''), route.get('dev', '')
+        if requested_source == 'auto':
+            routes = json.loads(subprocess.check_output(['ip', '-j', 'route', 'get', '1.1.1.1'], text=True, timeout=10))
+            route = routes[0]
+            source, interface = route.get('src', ''), route.get('dev', '')
+        else:
+            devices = json.loads(subprocess.check_output(['ip', '-j', '-4', 'address', 'show'], text=True, timeout=10))
+            match = next(((device.get('ifname', ''), address.get('local', ''))
+                          for device in devices for address in device.get('addr_info', [])
+                          if address.get('local') == requested_source), None)
+            if not match:
+                raise RuntimeError('Selected source IP is no longer assigned to this VM')
+            interface, source = match
         try:
             source = str(ipaddress.IPv4Address(source))
         except ipaddress.AddressValueError as exc:
             raise RuntimeError('Original physical IPv4 uplink is unavailable') from exc
         if not re.fullmatch(r'[A-Za-z0-9_.:-]{1,15}', interface):
             raise RuntimeError('Original physical IPv4 uplink is unavailable')
-        if interface == 'lo' or interface.startswith(('ppp', 'zt', 'wg', 'tun', 'tap')):
-            raise RuntimeError('Default route points to a tunnel, not the original physical uplink')
+        excluded = ('ppp', 'zt', 'wg', 'tun', 'tap', 'tailscale', 'docker', 'br-', 'virbr', 'veth', 'cni', 'flannel', 'podman')
+        if interface == 'lo' or interface.startswith(excluded):
+            raise RuntimeError('Selected interface is a tunnel or virtual interface, not an uplink')
         folder = Path('/var/lib/zerotier-one')
         folder.mkdir(mode=0o700, parents=True, exist_ok=True)
         local_conf = folder / 'local.conf'
@@ -58,7 +73,7 @@ def execute(root, job_id, network_id, mode):
         cli_path = shutil.which('zerotier-cli')
         if not cli_path:
             cli_path = next((p for p in ('/usr/sbin/zerotier-cli', '/usr/bin/zerotier-cli') if Path(p).exists()), None)
-        if mode in ('bind', 'retry') and not cli_path:
+        if mode == 'retry' and not cli_path:
             raise RuntimeError('ZeroTier is not installed')
         if mode == 'connect' and not cli_path:
             state('running', 'Устанавливаем ZeroTier…')
@@ -101,10 +116,16 @@ def execute(root, job_id, network_id, mode):
         log_path = work / 'setup.log'
         with log_path.open('a', encoding='utf-8') as output:
             output.write(type(exc).__name__ + ': ' + str(exc) + '\n')
+            for name in ('stdout', 'stderr', 'output'):
+                detail = getattr(exc, name, None)
+                if detail:
+                    if isinstance(detail, bytes):
+                        detail = detail.decode('utf-8', errors='replace')
+                    output.write(name + ': ' + str(detail).strip() + '\n')
         state('failed', 'Не удалось подключиться. Подробности сохранены в журнале updates/zerotier-jobs/' + job_id + '/setup.log.')
         raise
 
 
 if __name__ == '__main__':
     os.umask(0o077)
-    execute(Path(sys.argv[1]).resolve(), sys.argv[2], sys.argv[3], sys.argv[4])
+    execute(Path(sys.argv[1]).resolve(), sys.argv[2], sys.argv[3], sys.argv[4], sys.argv[5])

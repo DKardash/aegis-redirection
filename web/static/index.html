@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/static/style.css?v=3.1.4">
+  <link rel="stylesheet" href="/static/style.css?v=3.1.5">
 </head>
 <body>
   <!-- ======= LOGIN ======= -->
@@ -863,15 +863,14 @@
             <div class="form-grid zerotier-config">
               <div class="field"><label for="zt-network-id">Network ID</label><input id="zt-network-id" type="text" maxlength="16" placeholder="16 символов" autocomplete="off"></div>
               <div class="field"><label for="zt-cidr">Подсеть сети</label><input id="zt-cidr" type="text" maxlength="18" value="10.241.0.0/16" autocomplete="off"></div>
+              <div class="field"><label for="zt-interface">Интерфейс подключения</label><select id="zt-interface"><option value="">Авто — системный маршрут</option></select></div>
             </div>
             <div class="update-actions zerotier-actions">
               <button id="btn-zt-save" class="btn btn-outline" type="button">Сохранить сеть</button>
               <button id="btn-zt-connect" class="btn btn-primary" type="button">Установить и подключить</button>
-              <button id="btn-zt-uplink" class="btn btn-outline" type="button" disabled>Закрепить исходный IP</button>
             </div>
             <div class="zerotier-details">
               <div><span>Служба</span><strong id="zt-service">—</strong></div>
-              <div><span>Исходный IP / интерфейс</span><strong id="zt-uplink">—</strong></div>
               <div><span>Устройство</span><strong id="zt-node-id">—</strong></div>
               <div><span>Адрес ZeroTier</span><strong id="zt-address">—</strong></div>
             </div>
@@ -1330,6 +1329,6 @@
 
   <div id="toast" class="hidden" aria-live="polite"></div>
 
-  <script src="/static/app.js?v=3.1.4"></script>
+  <script src="/static/app.js?v=3.1.5"></script>
 </body>
 </html>

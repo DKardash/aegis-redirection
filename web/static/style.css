@@ -245,7 +245,7 @@ body {
 .zerotier-details span { color: #90a5b6; font-size: 12px; }
 .zerotier-details strong { overflow-wrap: anywhere; font-size: 14px; }
 .zt-panel-link { display: inline-block; margin-top: 18px; color: #76d9ce; }
-#zt-message { margin: 18px 0 0; }
+#zt-message { margin: 18px 0 0; white-space: pre-line; overflow-wrap: anywhere; }
 #view-updates > .card { margin-bottom: 20px; }
 .nav-item {
   display: flex;
